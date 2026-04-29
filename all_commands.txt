@@ -1,0 +1,500 @@
+   37  git add .
+   38  git reset
+   39  cd myfolder
+   40  git add .
+   41  git status
+   42  cd ..
+   43  git add --all
+   44  git status
+   45  git status
+   46  git reset
+   47  git status
+   48  git add*
+   49  git add *
+   50  git status
+   51  git reset
+   52  git add one.txt
+   53  git add myfolder/three.txt
+   54  git add two.txt
+   55  git status
+   56  git reset
+   57  git add *.txt
+   58  git status
+   59  git add .
+   60  git status
+   61  git commit -m "i have made some changes to files"
+   62  git version
+   63  cd /Desktop
+   64  cd~/Desktop
+   65  cd ~/desktop
+   66  mkdir git-1
+   67  cd git-1
+   68  touch one.txt
+   69  touch two.txt
+   70  mkdir myfolder
+   71  cd myfolder
+   72  touch three.txt
+   73  open .
+   74  cd ~/Desktop
+   75  open  ,
+   76  open.
+   77  git init
+   78  cd git-1
+   79  git init
+   80  ls
+   81  ls -la
+   82  gitconfig --h
+   83  mkdir Moon
+   84  cd Moon
+   85  git init
+   86  ls
+   87  ls -a
+   88  open.git
+   89  rm -rf .git
+   90  git init
+   91  mkdir Moon
+   92  cd Moon
+   93  git init
+   94  open .git
+   95  echo hello > file1.text
+   96  git status
+   97  git add .
+   98  cd Moon
+   99  echo hello > file1.txt
+  100  echo hello > file2.txt
+  101  git status
+  102  git add file1.txt file2.txt
+  103  git add .
+  104  get status
+  105  git status
+  106  echo world >> file1.txt
+  107  git status
+  108  git add *txt
+  109  git add .
+  110  git commit -m 
+  111  git commit
+  112  cd Moon
+  113  echo test >> file1.txt
+  114  git commit -am "Fixed the bug"
+  115  rm file1.txt
+  116  git status
+  117  git is-files
+  118  git ls-files
+  119  git add file2.txt
+  120  git ls-files
+  121  git add file1.txt
+  122  git ls-files
+  123  git status
+  124  git commit -m "Remove unused file"
+  125  git rm file1.txt *.txt
+  126  mv file2.txt main.js
+  127  git ststus
+  128  git status
+  129  git add file2.txt
+  130  git add main.js
+  131  git status
+  132  git mv main.js file1.js
+  133  git status
+  134  git commit -m "Refactor code."
+  135  mkdr long
+  136  mkdir logs
+  137  echo hello > log/dev.log
+  138  echo hello > logs/dev.log
+  139  git status
+  140  echo logs/>.gitignore
+  141  git status
+  142  git add .gitignore
+  143  mkdir bin
+  144  echo hello > bin/app.bin
+  145  git status
+  146  git add .
+  147  git commit -m "Add bin."
+  148  git ls
+  149  ls
+  150  git add .
+  151  git commit -m " bin"
+  152  echo helloworld > bin/app.bin
+  153  git status
+  154  git ls-files
+  155  git rm -h
+  156  git rm --cached bin/
+  157  git rm -h
+  158  git rm --cached -r bin/rm 'bin/app.bin'
+  159  git ls-files
+  160  git rm --cached -r bin/
+  161  git ls-files
+  162  git status 
+  163  git rm -cached bin/
+  164  git rm --cached bin/
+  165  git rm -cached bin/app.bin
+  166  git commit -m "removed bin"
+  167  echo test > bin/app.bin
+  168  git ststus
+  169  echo sky >> file1.js
+  170  echo sky >> file2.txt
+  171  git status
+  172  git status -s
+  173  git add file1.js
+  174  git status -s
+  175  echo ocean >> file1.js
+  176  git status -s
+  177  git add file1.js
+  178  git status -s
+  179  git add file2.js
+  180  git status -s
+  181  git add .
+  182  git status -s
+  183   git diff -stagged
+  184  cd Moon
+  185  git diff --staged
+  186  git rm --cached bin/
+  187  git rm --cached -r bin/
+  188  git status -s
+  189  git rm file2.txt file2.js 
+  190  git mv file2.txt file2.js
+  191  git status -s
+  192  git add *.js
+  193  git diff
+  194  git ststus -s
+  195  git status
+  196  git config --global diff.tool vscode
+  197  git config --global difftool.vscode.cmd "code --wait --diff $LOCAL $REMOTEA"
+  198  git config --global -e
+  199  GIT LOG
+  200  cd Moon
+  201  git log
+  202  git log --oneline
+  203  git log --oneline --reverse
+  204  git show Head~1
+  205  cd Desktop
+  206  cd open_source
+  207  cd open_source
+  208  git clone [200~https://github.com/eyerusalem-dev/gondar-patient-referral-system.git~
+  209  git clone https://github.com/eyerusalem-dev/gondar-patient-referral-system.git
+  210  cd gondar-patient-referral-system
+  211  git push
+  212  cd Desktop
+  213  cd open_source
+  214  cd Desktop
+  215  cd open_source
+  216  cd gondar-patient-referral-system
+  217  cd backend
+  218  python -m venv venv
+  219  source venv/Scripts/activate 
+  220  pip install django djangorestframework mysqlclient pymongo django-cors-headers
+  221  Pillow python-dotenv
+  222  Pillow python-dotenv
+  223  pip install python-dotenv
+  224  pip install django djangorestframework mysqlclient pymongo django-cors-headers Pillow python-dotenv
+  225  django-admin startproject config .
+  226  python manage.py runserver
+  227  git status
+  228  git add .
+  229  git status
+  230  git status
+  231  git commit -m "Initial project setup: React frontend setup"
+  232  git push origin main
+  233  cd Desktop
+  234  cd open_source
+  235  cd gondar-patient-referral-system
+  236  mkdir backend
+  237  cd backend
+  238  mkdir apps config media templates
+  239  cd apps
+  240  mkdir users patients referrals nursung lab pharmacy billing audit
+  241  cd ../..
+  242  npx create-react-app frontend
+  243  cd backend
+  244  python -m venv venv
+  245  venv\Script\activate
+  246  python -m venv venv
+  247  venv\Scripts\activate
+  248  venv\Scripts\activate
+  249  pip install django djangorframework mysqlclient pymongo django-cors-headers
+  250  cd ../frontend
+  251  npm install axios react-router-dom
+  252  npm start
+  253  git status
+  254  git add .
+  255  git status
+  256  git commit -m "initial project setup: Django backend"
+  257  git push original main
+  258  git push origin main
+  259  cd Desktop
+  260  cd open_source
+  261  cd gondar-patient-referral-system
+  262  cd ../frontend
+  263  cd Desktop
+  264  cd open_source
+  265  mkdir Notes
+  266  cd Notes
+  267  git -h
+  268  mysql -u root -p
+  269  cd backend
+  270  cd desktop
+  271  cd open_source
+  272  cd backend
+  273  cd gondar-patient-referral-system
+  274  cd backend
+  275  mkdir -p apps/users apps/patients apps/referrals
+  276  python manage.py makemigrations
+  277  python manage.py makemigrations
+  278  cd apps
+  279  python manage.py makemigrations
+  280  cd backend
+  281  cd Desktop
+  282  cd open_source
+  283  cd gondar-patient-refferal-system
+  284  cd gondar-patient-referral-system
+  285  cd backend
+  286  venv/Scripts/activate
+  287  cd apps/users
+  288  cd ../../..
+  289  cd backend
+  290  pip install mysqlclient
+  291  python manage.py dbshell
+  292  . venv/Scripts/activate
+  293  python manage.py dbshell
+  294  ls -la
+  295  pip install django
+  296  pip install -r requirements.txt
+  297  pip install mysqlclient
+  298  python manage.py dbshell
+  299  pip install pymysql
+  300  python manage.py dbshell
+  301  cd apps
+  302  pip install mysqlclient
+  303  cd ../../..
+  304  cd gondar-referral-system
+  305  cd gondar-patient-referral-system
+  306  cd backend
+  307  python manage.py dbshell
+  308  python manage.py dbshell
+  309  python manage.py makemigrations users
+  310  pip install pymysqlclient
+  311  pip install pymysql
+  312  pip install pymysql
+  313  python manage.py dbshell
+  314  pip uninstall pymysql -y
+  315  pip install mysqlclient
+  316  pip install django==5.0
+  317  pip install pymysql
+  318  python manage.py dbshell
+  319  python manage.py makemigrations users
+  320  python manage.py makemigrations users
+  321  python manage.py makemigrations patients
+  322  python manage.py makemigrations referrals
+  323  python manage.py migrate
+  324  python manage.py createsuperuser
+  325  python manage.py runserver
+  326  mysql -u root -p
+  327  git status
+  328  cd ../..
+  329  cd gondar-patient-referral-system
+  330  git status
+  331  git add .
+  332  git commit -m "Phase 2 Complete: MySQL database + User/patient/Referral models + migrations"
+  333  git push priginal main
+  334  cd Desktop
+  335  cd open_source
+  336  cd gondar-patient-referral-system
+  337  cd backend
+  338  mkdir students\migrations
+  339  touch students\migrations\__init__.py
+  340  mkdir visits\migrations
+  341  touch visits\migrations\__init__.py
+  342  mkdir referrals\migrations
+  343  touch referrals\migrations\__init__.py
+  344  mkdir departments\migrations
+  345  touch departments\migrations\__init__.py
+  346  python manage.py makemigrations users
+  347  source venv/Scripts/activate
+  348  python manage.py makemigrations users
+  349  python manage.py makemigrations users
+  350  find apps -path "*/migrations/*.py" -not -name "__init__.py" -delete
+  351  python manage.py makemigrations
+  352  python manage.py migrate
+  353  python manage.py showmigrations
+  354  python manage.py migrate auth
+  355  python manage.py migrate admin
+  356  mysql -u root -p -e "DROP DATABASE uog_referral_system; CREATE DATABASE uog_referral_system;"
+  357  python manage.py migrate
+  358  python manage.py startapp users apps/users
+  359  cd Desktop
+  360  cd open_source
+  361  cd gondar-patient-referral-system
+  362  cd backend
+  363  venv/Scripts/activate
+  364  mysql -u root -p
+  365  ../..
+  366  cd apps
+  367  ls -la
+  368  mkdir -p users/students
+  369  mkdir -p/users/visits
+  370  mkdir -p users/departments
+  371  mkdir -p/users/visits
+  372   mkdir -p users/visits
+  373  mkdir -p users/departments
+  374  mv patients/* users/students/ 2>/dev/null
+  375  rmdir patients
+  376  mv referrals/* users/referrals/ 2>/dev/null
+  377  rmdir referrals
+  378  ren patients students
+  379  ls -la
+  380  mkdir students
+  381  mkdir visits
+  382  mkdir departments
+  383  cd visits
+  384  type nul> --init__.py
+  385  type nul > __init__.py
+  386  touch __init__.py
+  387  touch models.py
+  388  touch apps.py
+  389  cd ../departments
+  390  touch __init__.py
+  391  touch apps.py
+  392  touch models.py
+  393  cd ../..
+  394  cd apps
+  395  cd users
+  396  rmkdir departments 
+  397  rmdir departments
+  398  rmdir __pycache
+  399  rmdir _pycatche__
+  400  rmdir __pycache__
+  401  rmdir migrations
+  402  mkdir users\migrations
+  403  touch users\migrations\__init__.py
+  404  mysql -u root -p
+  405  cd desktop
+  406  mkdir Final Year Project
+  407  cd Final Year Project
+  408  cd open_source
+  409  git clonehttps://github.com/eyerusalem-dev/uog-student-referral-system.git
+  410  git clone https://github.com/eyerusalem-dev/uog-student-referral-system.git
+  411  cd Desktop/open_source/uog-student-refferal-system
+  412  cd Desktop/open_source/uog-student-referral-system
+  413  cd Desktop
+  414  cd open_source
+  415  cd uog-student-referral-system
+  416  cd backend
+  417  venv/Scripts/activate
+  418  mysql -u root -p
+  419  cd Desktop/open_source/uog-student-referral-system
+  420  python --version
+  421  node --version
+  422  npm --version
+  423  git --version
+  424  mysql --version
+  425  mkdir backend
+  426  cd backend
+  427  python -m venv venv
+  428  venv/Scripts/activate
+  429  pip install django djangorestframework django-cors-headers pymysql Pillow python-dotenv
+  430  django-admin startproject config .
+  431  mkdir apps
+  432  cd apps
+  433  mkdir users departments students visits referrals
+  434  cd users
+  435  touch __init__.py
+  436  touch models.py
+  437  touch apps.py
+  438  touch admin.py
+  439  touch views.py
+  440  touch urls.py
+  441  mkdir migrations
+  442  touch migrations\
+  443  touch migrations\__init__.py
+  444  cd ../students
+  445  touch __init__.py
+  446  touch models.py
+  447  touch apps.py
+  448  touch admin.py
+  449  touch views.py
+  450  touch urls.py
+  451  mkdir migrations
+  452  touch migrations\__init__.py
+  453  cd ../visits
+  454  touch __init__.py
+  455  touch models.py
+  456  touch apps.py
+  457  touch admin.py
+  458  touch views.py
+  459  touch urls.py
+  460  mkdir migrations
+  461  touch migrations\__init__.py
+  462  cd ../referrals
+  463  touch __init__.py
+  464  touch models.py
+  465  touch apps.py
+  466  touch admin.py
+  467  touch views.py
+  468  touch urls.py
+  469  mkdir migrations
+  470  touch migrations\__init__.py
+  471  cd ../..
+  472  cd apps
+  473  touch __init__.py
+  474  cd ../..
+  475  cd Desktop
+  476  cd open_source
+  477  cd uog-student-referral-system
+  478  cd backend
+  479  cd ../departments
+  480  touch views.py
+  481  touch urls.py
+  482  mkdir migrations
+  483  touch migrations\__init__.py
+  484  cd apps
+  485   cd ../departments
+  486  touch views.py
+  487  touch urls.py
+  488  mkdir migrations
+  489  touch migrations\__init__.py
+  490  cd department
+  491  cd departments
+  492  touch views.py
+  493  touch urls.py
+  494  mkdir migrations
+  495  touch migrations\__init__.py
+  496  venv\Scripts\activate
+  497  cd ../..
+  498  venv\Scripts\activate
+  499  venv/Scripts/activate
+  500  python manage.py makemigrations users
+  501  cd Desktop
+  502  cd open_source
+  503  cd uog-student-referral-system
+  504  cd backend
+  505  source venv/Scripts/activate
+  506  python manage.py makemigrations users
+  507  pip install django
+  508  python.exe -m pip install --upgrade pip
+  509  pip install pymysql
+  510  pip list
+  511  python manage.py makemigrations users
+  512  which pip
+  513  pip install djangorestframework
+  514  python manage.py makemigrations users
+  515  pip install djangorestframework-simplejwt
+  516  pip install django-cors-headers
+  517  pip install django-filter
+  518  python manage.py makemigrations users
+  519  python manage.py makemigrations users
+  520  python manage.py makemigrations users
+  521  pip install Pillow
+  522  python manage.py makemigrations users
+  523  python manage.py makemigrations departments
+  524  python manage.py makemigrations students
+  525  python manage.py makemigrations visits
+  526  python manage.py makemigrations referrals
+  527  python manage.py migrate
+  528  python manage.py createsuperuser
+  529  python manage.py runserver
+  530  mysql -u root -p
+  531  touch .gitignore
+  532  cd ..
+  533  git add .
+  534  git commit -m "Phase 2: Fresh setup with UOG referral system models"
+  535  git push origin main
+  536  history > all_commands.txt
