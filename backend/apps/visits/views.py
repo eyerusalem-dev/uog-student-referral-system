@@ -1,34 +1,22 @@
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework import status
-
-from config.permissions import IsAdminOrClinician, IsAdminRole
 from .models import ClinicalVisit
 from .serializers import ClinicalVisitSerializer
-
+from rest_framework.permissions import IsAuthenticated
+from config.permissions import IsAdminRole, IsAdminOrClinician
 
 class ClinicalVisitViewSet(viewsets.ModelViewSet):
-    queryset = ClinicalVisit.objects.select_related('student', 'clinician').all().order_by('-visit_date')
+    queryset = ClinicalVisit.objects.all()
     serializer_class = ClinicalVisitSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update']:
+        if self.action == 'create':
             return [IsAuthenticated(), IsAdminOrClinician()]
-        if self.action == 'destroy':
-            return [IsAuthenticated(), IsAdminRole()]
+        if self.action in ['update', 'partial_update']:
+            # Logic: Only admin can edit if is_locked is True
+            return [IsAuthenticated()] 
         return [IsAuthenticated()]
 
     def perform_create(self, serializer):
+        # AUTO-SET clinician to current user and lock the visit
         serializer.save(clinician=self.request.user, is_locked=True)
-
-    def update(self, request, *args, **kwargs):
-        visit = self.get_object()
-
-        if visit.is_locked and getattr(request.user, 'role', None) != 'admin':
-            return Response(
-                {'detail': 'This visit is locked. Only admin can edit it.'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        return super().update(request, *args, **kwargs)

@@ -1,3 +1,4 @@
+import uuid # Added for ID generation
 from django.utils import timezone
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -8,13 +9,9 @@ from config.permissions import IsAdminOrClinician, IsAdminOrDepartmentReceiver, 
 from .models import Referral
 from .serializers import ReferralSerializer
 
-
 class ReferralViewSet(viewsets.ModelViewSet):
     queryset = Referral.objects.select_related(
-        'student',
-        'clinical_visit',
-        'referred_by',
-        'receiving_department'
+        'student', 'clinical_visit', 'referred_by', 'receiving_department'
     ).all()
     serializer_class = ReferralSerializer
     lookup_field = 'referral_id'
@@ -25,10 +22,8 @@ class ReferralViewSet(viewsets.ModelViewSet):
 
         if getattr(user, 'role', None) == 'admin':
             return qs
-
         if getattr(user, 'role', None) == 'clinician':
             return qs.filter(referred_by=user)
-
         if getattr(user, 'role', None) == 'department_receiver' and user.department:
             return qs.filter(receiving_department=user.department)
 
@@ -44,7 +39,10 @@ class ReferralViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated()]
 
     def perform_create(self, serializer):
-        serializer.save(referred_by=self.request.user)
+        # AUTO-GENERATE referral_id (e.g., REF-A1B2C3D4)
+        random_id = uuid.uuid4().hex[:8].upper()
+        ref_id = f"REF-{random_id}"
+        serializer.save(referral_id=ref_id, referred_by=self.request.user)
 
     def update(self, request, *args, **kwargs):
         referral = self.get_object()
@@ -61,7 +59,6 @@ class ReferralViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         instance = serializer.save()
-
         if instance.status in ['accepted', 'declined'] and instance.responded_at is None:
             instance.responded_at = timezone.now()
             instance.save(update_fields=['responded_at'])
