@@ -1,38 +1,237 @@
-.App {
-  text-align: center;
+* {
+  box-sizing: border-box;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f4f6f8;
+  color: #1f2937;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+a {
+  color: inherit;
+  text-decoration: none;
 }
 
-.App-header {
-  background-color: #282c34;
+.login-page {
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
+  align-items: center;
+  background: #e8eef5;
+}
+
+.login-card {
+  width: 400px;
+  background: white;
+  padding: 35px;
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.login-card h1 {
+  text-align: center;
+  margin: 0;
+  color: #003366;
+  font-size: 42px;
+}
+
+.login-card h2 {
+  text-align: center;
+  margin: 10px 0;
+  font-size: 20px;
+}
+
+.login-subtitle {
+  text-align: center;
+  color: #6b7280;
+  margin-bottom: 25px;
+}
+
+.login-card label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: bold;
+}
+
+.login-card input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 18px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+
+.login-card button {
+  width: 100%;
+  padding: 12px;
+  background: #003366;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.login-card button:hover {
+  background: #004f99;
+}
+
+.login-card button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.error-box {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 18px;
+}
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 240px;
+  background: #003366;
+  color: white;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-title {
+  margin: 0;
+  font-size: 30px;
+}
+
+.sidebar-subtitle {
+  margin-top: 5px;
+  font-size: 14px;
+  color: #cbd5e1;
+}
+
+.sidebar-nav {
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sidebar-nav a {
+  padding: 10px;
+  border-radius: 6px;
   color: white;
 }
 
-.App-link {
-  color: #61dafb;
+.sidebar-nav a:hover {
+  background: #004f99;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.logout-button {
+  margin-top: auto;
+  padding: 10px;
+  border: none;
+  background: #dc2626;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.logout-button:hover {
+  background: #b91c1c;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  height: 70px;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 10px 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.topbar p {
+  margin: 4px 0 0 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.user-box {
+  text-align: right;
+}
+
+.user-box span {
+  display: block;
+  font-weight: bold;
+}
+
+.user-box small {
+  color: #6b7280;
+}
+
+.page-content {
+  padding: 30px;
+}
+
+.muted {
+  color: #6b7280;
+}
+
+.dashboard-grid {
+  margin-top: 25px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.dashboard-card {
+  background: white;
+  padding: 22px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.dashboard-card h3 {
+  margin-top: 0;
+}
+
+.dashboard-card p {
+  color: #6b7280;
+}
+
+.dashboard-card a {
+  display: inline-block;
+  margin-top: 10px;
+  background: #003366;
+  color: white;
+  padding: 9px 12px;
+  border-radius: 6px;
+}
+
+.center-screen {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.simple-card {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
 }

@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import api from '../services/api';
 
 const AuthContext = createContext();
@@ -7,20 +7,11 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Check if user is logged in on page load
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      fetchUser();
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  const fetchUser = async () => {
+  const fetchCurrentUser = async () => {
     try {
       const response = await api.get('/auth/user/');
       setUser(response.data);
+      localStorage.setItem('user', JSON.stringify(response.data));
     } catch (error) {
       logout();
     } finally {
@@ -28,20 +19,37 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+
+    if (token) {
+      fetchCurrentUser();
+    } else {
+      setLoading(false);
+    }
+  }, []);
+
   const login = async (username, password) => {
     try {
-      const response = await api.post('/auth/login/', { username, password });
-      const { access, refresh } = response.data;
-      
-      localStorage.setItem('access_token', access);
-      localStorage.setItem('refresh_token', refresh);
-      
-      await fetchUser();
-      return { success: true };
+      const response = await api.post('/auth/login/', {
+        username,
+        password,
+      });
+
+      localStorage.setItem('access_token', response.data.access);
+      localStorage.setItem('refresh_token', response.data.refresh);
+
+      await fetchCurrentUser();
+
+      return {
+        success: true,
+      };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error.response?.data?.detail || 'Login failed' 
+      return {
+        success: false,
+        message:
+          error.response?.data?.detail ||
+          'Login failed. Please check your username and password.',
       };
     }
   };
@@ -54,10 +62,20 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        logout,
+        fetchCurrentUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  return useContext(AuthContext);
+};
