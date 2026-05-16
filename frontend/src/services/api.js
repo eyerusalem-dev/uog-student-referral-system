@@ -34,4 +34,10 @@ export const getStudent = (id) => api.get(`/students/${id}/`);
 export const createStudent = (data) => api.post('/students/', data);
 export const updateStudent = (id, data) => api.patch(`/students/${id}/`, data);
 
+// Visit APIs
+export const getVisits = () => api.get('/visits/');
+export const createVisit = (data) => api.post('/visits/', data);
+export const getVisit = (id) => api.get(`/visits/${id}/`);
+export const updateVisit = (id, data) => api.patch(`/visits/${id}/`, data);
+
 export default api;

@@ -403,3 +403,47 @@ a {
 .badge.pending { background: #fef3c7; color: #92400e; }
 .badge.accepted { background: #d1fae5; color: #065f46; }
 .badge.declined { background: #fee2e2; color: #991b1b; }
+
+.form-group textarea,
+.form-group select {
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.form-group textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.checkbox-group {
+  grid-column: 1 / -1;
+  background: #f9fafb;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: normal;
+}
+
+.checkbox-group input {
+  width: auto;
+  margin: 0;
+}
+
+.section-divider {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 25px 0;
+}
