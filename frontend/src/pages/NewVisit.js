@@ -1,259 +1,295 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { getStudents, createVisit } from '../services/api';
+import { getStudent, createVisit, createLabRequest, createPrescription } from '../services/api';
+
+// UTC Formatter
+const formatUTC = (isoString) => {
+  if (!isoString) return { date: '', time: '' };
+  const dateObj = new Date(isoString);
+  const date = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' }).format(dateObj);
+  const time = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit', hour12: true }).format(dateObj);
+  return { date, time: `${time} UTC` };
+};
 
 const NewVisit = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const studentId = searchParams.get('student');
 
-  const preselectedStudent = searchParams.get('student');
-
-  const [students, setStudents] = useState([]);
-  const [loadingStudents, setLoadingStudents] = useState(true);
+  const [student, setStudent] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  
+  // Current UTC time for display
+  const [currentUTC, setCurrentUTC] = useState(formatUTC(new Date().toISOString()));
 
-  const [formData, setFormData] = useState({
-    student: preselectedStudent || '',
+  // Visit form data
+  const [visitData, setVisitData] = useState({
+    student: studentId || '',
     symptoms: '',
     diagnosis: '',
     advice: '',
     treatment: '',
     note: '',
-    lab_used: false,
-    lab_note: '',
-    pharmacy_used: false,
-    medication_given: '',
   });
 
+  // Lab requests array
+  const [labRequests, setLabRequests] = useState([]);
+  
+    // Prescriptions array
+  const [prescriptions, setPrescriptions] = useState([]);
+
+
+
   useEffect(() => {
-    fetchStudents();
-  }, []);
+    if (studentId) {
+      getStudent(studentId).then(res => {
+        setStudent(res.data);
+        setLoading(false);
+      }).catch(() => {
+        setError('Failed to load student data');
+        setLoading(false);
+      });
+    } else {
+      setError('No student selected');
+      setLoading(false);
+    }
+  }, [studentId]);
 
-  const fetchStudents = async () => {
-    try {
-      const response = await getStudents();
-      setStudents(response.data);
-    } catch (err) {
-      console.error('Failed to fetch students:', err);
-      setError('Could not load students.');
-    } finally {
-      setLoadingStudents(false);
+  const handleVisitChange = (e) => {
+    setVisitData({ ...visitData, [e.target.name]: e.target.value });
+  };
+
+  // Lab request handlers
+  const addLabRequest = () => {
+    setLabRequests([...labRequests, { test_name: '', reason: '' }]);
+  };
+
+  const updateLabRequest = (index, field, value) => {
+    const updated = [...labRequests];
+    updated[index][field] = value;
+    setLabRequests(updated);
+  };
+
+  const removeLabRequest = (index) => {
+    if (labRequests.length > 1) {
+      setLabRequests(labRequests.filter((_, i) => i !== index));
     }
   };
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value,
-    });
+  // Prescription handlers
+  const addPrescription = () => {
+    setPrescriptions([...prescriptions, { medication_name: '', dosage: '', frequency: '', duration: '' }]);
   };
 
-  const validateForm = () => {
-    if (!formData.student) {
-      return 'Please select a student.';
-    }
+  const updatePrescription = (index, field, value) => {
+    const updated = [...prescriptions];
+    updated[index][field] = value;
+    setPrescriptions(updated);
+  };
 
-    if (!formData.symptoms.trim()) {
-      return 'Symptoms are required.';
+  const removePrescription = (index) => {
+    if (prescriptions.length > 1) {
+      setPrescriptions(prescriptions.filter((_, i) => i !== index));
     }
-
-    if (formData.lab_used && !formData.lab_note.trim()) {
-      return 'Lab note is required when lab is used.';
-    }
-
-    if (formData.pharmacy_used && !formData.medication_given.trim()) {
-      return 'Medication given is required when pharmacy is used.';
-    }
-
-    return null;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setSubmitting(true);
     setError('');
 
-    const validationError = validateForm();
-
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
-    setSubmitting(true);
-
     try {
-      await createVisit(formData);
-      navigate(`/students/${formData.student}`);
-    } catch (err) {
-      console.error('Visit creation failed:', err);
+      // 1. Create the visit first
+      const visitRes = await createVisit(visitData);
+      const visitId = visitRes.data.id;
 
-      if (err.response?.data) {
-        setError(JSON.stringify(err.response.data));
-      } else {
-        setError('Failed to create visit.');
-      }
+      // 2. Create lab requests if filled
+      const labPromises = labRequests
+        .filter(lab => lab.test_name.trim())
+        .map(lab => createLabRequest({
+          clinical_visit: visitId,
+          test_name: lab.test_name,
+          reason: lab.reason
+        }));
+      
+      await Promise.all(labPromises);
+
+      // 3. Create prescriptions if filled
+      const rxPromises = prescriptions
+        .filter(rx => rx.medication_name.trim())
+        .map(rx => createPrescription({
+          clinical_visit: visitId,
+          medication_name: rx.medication_name,
+          dosage: rx.dosage,
+          frequency: rx.frequency,
+          duration: rx.duration
+        }));
+      
+      await Promise.all(rxPromises);
+
+      // Redirect to student profile
+      navigate(`/students/${studentId}`);
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.detail || 'Failed to save visit. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
+  if (loading) return <Layout><p>Loading...</p></Layout>;
+
+  const inputStyle = { width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', fontFamily: 'inherit' };
+  const textareaStyle = { ...inputStyle, minHeight: '80px', resize: 'vertical' };
+  const labelStyle = { display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '14px' };
+
   return (
     <Layout>
       <h1>New Clinical Visit</h1>
-      <p className="muted">
-        Record the student’s clinic visit, including lab and pharmacy usage.
-      </p>
+      
+      {error && (
+        <div style={{ background: '#fee2e2', color: '#991b1b', padding: '12px', borderRadius: '8px', marginBottom: '20px' }}>
+          {error}
+        </div>
+      )}
 
-      {error && <div className="error-box">{error}</div>}
+      <form onSubmit={handleSubmit}>
+        
+        {/* Student Info - No dropdown, separate Name and ID */}
+        {student && (
+          <div style={{ background: 'white', padding: '20px', borderRadius: '12px', marginBottom: '20px', color: '#333' }}>
+            <h3 style={{ margin: '0 0 12px', fontSize: '18px', color: '#1053ae' }}>Patient Information</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '20px', fontWeight: '700' }}>{student.first_name} {student.last_name}</div>
+                <div style={{ fontSize: '14px', color: '#666', marginTop: '4px' }}>ID: {student.university_id}</div>
+                <div style={{ fontSize: '13px', color: '#666' }}>{student.department} | Year {student.year_of_study}</div>
+              </div>
+              
+              {/* Date and Time Bars - UTC */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
+                <span style={{ background: '#e0e7ff', color: '#1e40af', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: '700' }}>
+                  📅 {currentUTC.date}
+                </span>
+                <span style={{ background: '#f3f4f6', color: '#4b5563', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '600' }}>
+                  ⏰ {currentUTC.time}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
-      <form onSubmit={handleSubmit} className="form-card">
-        <div className="form-grid">
-          <div className="form-group full-width">
-            <label>Student</label>
-
-            {loadingStudents ? (
-              <p>Loading students...</p>
-            ) : (
-              <select
-                name="student"
-                value={formData.student}
-                onChange={handleChange}
-                required
-              >
-                <option value="">Select student</option>
-                {students.map((student) => (
-                  <option
-                    key={student.university_id}
-                    value={student.university_id}
-                  >
-                    {student.university_id} - {student.first_name}{' '}
-                    {student.last_name}
-                  </option>
-                ))}
-              </select>
-            )}
+        {/* Clinical Notes */}
+        <div style={{ background: 'white', padding: '24px', borderRadius: '12px', marginBottom: '20px', color: '#333' }}>
+          <h3 style={{ margin: '0 0 16px', fontSize: '16px', color: '#1053ae' }}>Clinical Assessment</h3>
+          
+          <div style={{ marginBottom: '16px' }}>
+            <label style={labelStyle}>Symptoms *</label>
+            <textarea name="symptoms" value={visitData.symptoms} onChange={handleVisitChange} required style={textareaStyle} placeholder="Patient complaints..." />
           </div>
 
-          <div className="form-group full-width">
-            <label>Symptoms *</label>
-            <textarea
-              name="symptoms"
-              value={formData.symptoms}
-              onChange={handleChange}
-              required
-              placeholder="Example: headache, fever, fatigue"
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+            <div>
+              <label style={labelStyle}>Diagnosis</label>
+              <input name="diagnosis" value={visitData.diagnosis} onChange={handleVisitChange} style={inputStyle} placeholder="Clinical diagnosis" />
+            </div>
+            <div>
+              <label style={labelStyle}>Treatment</label>
+              <input name="treatment" value={visitData.treatment} onChange={handleVisitChange} style={inputStyle} placeholder="Treatment plan" />
+            </div>
           </div>
 
-          <div className="form-group">
-            <label>Diagnosis</label>
-            <textarea
-              name="diagnosis"
-              value={formData.diagnosis}
-              onChange={handleChange}
-              placeholder="Example: suspected viral infection"
-            />
+          <div style={{ marginBottom: '16px' }}>
+            <label style={labelStyle}>Advice</label>
+            <textarea name="advice" value={visitData.advice} onChange={handleVisitChange} style={textareaStyle} placeholder="Patient advice..." />
           </div>
 
-          <div className="form-group">
-            <label>Treatment</label>
-            <textarea
-              name="treatment"
-              value={formData.treatment}
-              onChange={handleChange}
-              placeholder="Example: Paracetamol 500mg"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Advice</label>
-            <textarea
-              name="advice"
-              value={formData.advice}
-              onChange={handleChange}
-              placeholder="Example: rest and drink fluids"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>General Note</label>
-            <textarea
-              name="note"
-              value={formData.note}
-              onChange={handleChange}
-              placeholder="Additional clinician note"
-            />
+          <div>
+            <label style={labelStyle}>General Notes</label>
+            <textarea name="note" value={visitData.note} onChange={handleVisitChange} style={textareaStyle} placeholder="Additional notes..." />
           </div>
         </div>
 
-        <hr className="section-divider" />
-
-        <div className="form-grid">
-          <div className="form-group checkbox-group">
-            <label>
-              <input
-                type="checkbox"
-                name="lab_used"
-                checked={formData.lab_used}
-                onChange={handleChange}
-              />
-              Lab used during this visit
-            </label>
+        {/* Lab Requests Section */}
+        <div style={{ background: 'white', padding: '24px', borderRadius: '12px', marginBottom: '20px', color: '#333' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', color: '#1053ae' }}>🧪 Lab Requests</h3>
+            <button type="button" onClick={addLabRequest} style={{ padding: '6px 12px', background: '#e0e7ff', color: '#1e40af', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
+              + Add Test
+            </button>
           </div>
 
-          {formData.lab_used && (
-            <div className="form-group full-width">
-              <label>Lab Note *</label>
-              <textarea
-                name="lab_note"
-                value={formData.lab_note}
-                onChange={handleChange}
-                placeholder="Example: CBC and malaria smear requested"
-              />
+          {labRequests.map((lab, index) => (
+            <div key={index} style={{ background: '#f9fafb', padding: '16px', borderRadius: '8px', marginBottom: '12px', border: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12px', color: '#666', fontWeight: '600' }}>Test #{index + 1}</span>
+                {labRequests.length > 1 && (
+                  <button type="button" onClick={() => removeLabRequest(index)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '12px' }}>Remove</button>
+                )}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ ...labelStyle, fontSize: '12px' }}>Test Name *</label>
+                  <input value={lab.test_name} onChange={(e) => updateLabRequest(index, 'test_name', e.target.value)} style={inputStyle} placeholder="e.g. CBC, X-Ray" required={index === 0} />
+                </div>
+                <div>
+                  <label style={{ ...labelStyle, fontSize: '12px' }}>Reason/Indication</label>
+                  <input value={lab.reason} onChange={(e) => updateLabRequest(index, 'reason', e.target.value)} style={inputStyle} placeholder="Why is this test needed?" />
+                </div>
+              </div>
             </div>
-          )}
-
-          <div className="form-group checkbox-group">
-            <label>
-              <input
-                type="checkbox"
-                name="pharmacy_used"
-                checked={formData.pharmacy_used}
-                onChange={handleChange}
-              />
-              Pharmacy used during this visit
-            </label>
-          </div>
-
-          {formData.pharmacy_used && (
-            <div className="form-group full-width">
-              <label>Medication Given *</label>
-              <textarea
-                name="medication_given"
-                value={formData.medication_given}
-                onChange={handleChange}
-                placeholder="Example: Paracetamol 500mg, 20 tablets"
-              />
-            </div>
-          )}
+          ))}
         </div>
 
-        <div className="form-actions">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="btn-secondary"
-          >
+        {/* Prescriptions Section */}
+        <div style={{ background: 'white', padding: '24px', borderRadius: '12px', marginBottom: '20px', color: '#333' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', color: '#1053ae' }}>💊 Medication Requests</h3>
+            <button type="button" onClick={addPrescription} style={{ padding: '6px 12px', background: '#e0e7ff', color: '#1e40af', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
+              + Add Medication
+            </button>
+          </div>
+
+          {prescriptions.map((rx, index) => (
+            <div key={index} style={{ background: '#f9fafb', padding: '16px', borderRadius: '8px', marginBottom: '12px', border: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12px', color: '#666', fontWeight: '600' }}>Medication #{index + 1}</span>
+                {prescriptions.length > 1 && (
+                  <button type="button" onClick={() => removePrescription(index)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '12px' }}>Remove</button>
+                )}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ ...labelStyle, fontSize: '12px' }}>Medication *</label>
+                  <input value={rx.medication_name} onChange={(e) => updatePrescription(index, 'medication_name', e.target.value)} style={inputStyle} placeholder="Drug name" required={index === 0} />
+                </div>
+                <div>
+                  <label style={{ ...labelStyle, fontSize: '12px' }}>Dosage</label>
+                  <input value={rx.dosage} onChange={(e) => updatePrescription(index, 'dosage', e.target.value)} style={inputStyle} placeholder="e.g. 500mg" />
+                </div>
+                <div>
+                  <label style={{ ...labelStyle, fontSize: '12px' }}>Frequency</label>
+                  <input value={rx.frequency} onChange={(e) => updatePrescription(index, 'frequency', e.target.value)} style={inputStyle} placeholder="e.g. BID" />
+                </div>
+                <div>
+                  <label style={{ ...labelStyle, fontSize: '12px' }}>Duration</label>
+                  <input value={rx.duration} onChange={(e) => updatePrescription(index, 'duration', e.target.value)} style={inputStyle} placeholder="e.g. 7 days" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Submit Buttons */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+          <button type="button" onClick={() => navigate(-1)} style={{ padding: '12px 24px', background: '#6b7280', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px' }}>
             Cancel
           </button>
-
-          <button type="submit" disabled={submitting} className="btn-primary">
-            {submitting ? 'Saving Visit...' : 'Save Visit'}
+          <button type="submit" disabled={submitting} style={{ padding: '12px 24px', background: '#1053ae', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
+            {submitting ? 'Saving Visit...' : 'Save Visit & Send Requests'}
           </button>
         </div>
       </form>

@@ -1,41 +1,36 @@
 from rest_framework import serializers
 from .models import Referral
+from apps.visits.models import ClinicalVisit
 
+class ClinicalVisitSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ClinicalVisit
+        fields = [
+            'id', 'symptoms', 'diagnosis', 'treatment', 'advice',
+            'lab_used', 'lab_note', 'pharmacy_used', 'medication_given', 'visit_date'
+        ]
 
 class ReferralSerializer(serializers.ModelSerializer):
     student_university_id = serializers.CharField(source='student.university_id', read_only=True)
     student_name = serializers.SerializerMethodField()
     receiving_department_name = serializers.CharField(source='receiving_department.name', read_only=True)
     referred_by_username = serializers.CharField(source='referred_by.username', read_only=True)
+    
+    # NEW: Include the clinical visit details
+    clinical_visit_details = ClinicalVisitSummarySerializer(source='clinical_visit', read_only=True)
 
     class Meta:
         model = Referral
         fields = [
-            'referral_id',
-            'student',
-            'student_university_id',
-            'student_name',
-            'clinical_visit',
-            'referred_by',
-            'referred_by_username',
-            'receiving_department',
-            'receiving_department_name',
-            'reason',
-            'referral_note',
-            'status',
-            'response_note',
-            'responded_at',
-            'created_at',
+            'referral_id', 'student', 'student_university_id', 'student_name',
+            'clinical_visit', 'clinical_visit_details', 'referred_by', 'referred_by_username',
+            'receiving_department', 'receiving_department_name',
+            'reason', 'referral_note', 'status', 'response_note', 'responded_at', 'created_at',
         ]
         read_only_fields = [
-            'referral_id',
-            'referred_by',
-            'responded_at',
-            'created_at',
-            'referred_by_username',
-            'student_university_id',
-            'student_name',
-            'receiving_department_name',
+            'referral_id', 'referred_by', 'responded_at', 'created_at',
+            'referred_by_username', 'student_university_id', 'student_name',
+            'receiving_department_name', 'clinical_visit_details'
         ]
 
     def get_student_name(self, obj):

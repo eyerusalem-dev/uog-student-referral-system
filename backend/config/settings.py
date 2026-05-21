@@ -65,15 +65,24 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-
-
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.getenv('DATABASE_URL'),
-        conn_max_age=600,
-        ssl_require=True
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'uog_referral_system',
+        'USER': 'root',
+        'PASSWORD': 'J0157515', # Put your actual MySQL password here
+        'HOST': 'localhost',
+        'PORT': '3306',
+    }
 }
+
+#DATABASES = {
+    #'default': dj_database_url.config(
+      #  default=os.getenv('DATABASE_URL'),
+     #   conn_max_age=600,
+      #  ssl_require=True
+ #   )
+#}
 
 
 AUTH_USER_MODEL = 'users.User'

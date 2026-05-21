@@ -1,72 +1,122 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import "./Login.css";
+
+import bgImage from "./hospital-bg.jpg";
+import logo from "./uog-logo.png";
 
 const Login = () => {
   const { login, user } = useAuth();
   const navigate = useNavigate();
 
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (user) {
-      navigate('/');
+      navigate("/");
     }
   }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     setSubmitting(true);
-    setErrorMessage('');
+    setError("");
 
     const result = await login(username, password);
 
     if (result.success) {
-      navigate('/');
+      navigate("/");
     } else {
-      setErrorMessage(result.message);
+      setError(result.message || "Login failed. Please try again.");
     }
 
     setSubmitting(false);
   };
 
   return (
-    <div className="login-page">
-      <div className="login-card">
-        <h1>UOG</h1>
-        <h2>Student Health Referral System</h2>
-        <p className="login-subtitle">Clinic to Hospital Referral Platform</p>
+    <div className="uog-login">
+      <img src={bgImage} alt="" className="uog-login__bgImage" />
+      <div className="uog-login__overlay" />
 
-        {errorMessage && <div className="error-box">{errorMessage}</div>}
+      <header className="uog-login__header">
+        <div className="uog-login__logoBox">
+          <img src={logo} alt="University of Gondar Hospital" />
+        </div>
+        <a href="mailto:admin@uog.edu.et" className="uog-login__adminLink">
+          Contact the Admin
+        </a>
+      </header>
 
-        <form onSubmit={handleSubmit}>
-          <label>Username</label>
-          <input
-            type="text"
-            placeholder="Enter username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-
-          <label>Password</label>
-          <input
-            type="password"
-            placeholder="Enter password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-
-          <button type="submit" disabled={submitting}>
-            {submitting ? 'Logging in...' : 'Login'}
+      <main className="uog-login__main">
+        <section className="uog-login__card">
+          <button
+            type="button"
+            className="uog-login__close"
+            onClick={() => window.location.reload()}
+            aria-label="Close"
+          >
+            ×
           </button>
-        </form>
-      </div>
+
+          <h1 className="uog-login__title">Login</h1>
+
+          {error && <div className="uog-login__error">{error}</div>}
+
+          <form onSubmit={handleSubmit} className="uog-login__form">
+            <div className="uog-login__field">
+              <label htmlFor="username">User Account</label>
+              <div className="uog-login__inputWrap uog-login__inputWrap--user">
+                <input
+                  id="username"
+                  name="username"
+                  type="text"
+                  placeholder="Enter username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  autoComplete="username"
+                />
+              </div>
+            </div>
+
+            <div className="uog-login__field">
+              <label htmlFor="password">Password</label>
+              <div className="uog-login__inputWrap uog-login__inputWrap--password">
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="Enter password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
+              </div>
+            </div>
+
+            <div className="uog-login__forgotRow">
+              <a href="#" className="uog-login__forgot">Forgot Password?</a>
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="uog-login__submit"
+            >
+              {submitting ? "LOGGING IN..." : "LOGIN"}
+            </button>
+          </form>
+        </section>
+      </main>
+
+      <footer className="uog-login__footer">
+        © 2026 University of Gondar Hospital Referral System
+      </footer>
     </div>
   );
 };

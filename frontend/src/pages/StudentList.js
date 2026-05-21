@@ -23,6 +23,7 @@ const StudentList = () => {
     }
   };
 
+  // Simple client-side search
   const filteredStudents = students.filter((student) =>
     student.university_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -31,59 +32,56 @@ const StudentList = () => {
 
   return (
     <Layout>
-      <div className="page-header">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h1>Students</h1>
-        <Link to="/students/new" className="btn-primary">+ Register New Student</Link>
+        <Link to="/students/new" style={{ padding: '10px 20px', background: '#1053ae', color: 'white', borderRadius: '8px', textDecoration: 'none' }}>
+          + Register New Student
+        </Link>
       </div>
 
-      <div className="search-bar">
-        <input
-          type="text"
-          placeholder="Search by ID or Name..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
+      <input
+        type="text"
+        placeholder="Search by ID or Name..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        style={{ width: '100%', padding: '12px', marginBottom: '20px', borderRadius: '8px', border: '1px solid #ccc' }}
+      />
 
       {loading ? (
         <p>Loading students...</p>
       ) : (
-        <div className="table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Department</th>
-                <th>Year</th>
-                <th>Phone</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredStudents.length > 0 ? (
-                filteredStudents.map((student) => (
-                  <tr key={student.university_id}>
-                    <td>{student.university_id}</td>
-                    <td>{student.first_name} {student.last_name}</td>
-                    <td>{student.department}</td>
-                    <td>{student.year_of_study}</td>
-                    <td>{student.phone}</td>
-                    <td>
-                      <Link to={`/students/${student.university_id}`} className="btn-sm">
-                        View Profile
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="6" style={{ textAlign: 'center' }}>No students found.</td>
+        <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', color: '#333', borderRadius: '8px', overflow: 'hidden' }}>
+          <thead style={{ background: '#f3f4f6' }}>
+            <tr>
+              <th style={{ padding: '12px', textAlign: 'left' }}>ID</th>
+              <th style={{ padding: '12px', textAlign: 'left' }}>Name</th>
+              <th style={{ padding: '12px', textAlign: 'left' }}>Department</th>
+              <th style={{ padding: '12px', textAlign: 'left' }}>Year</th>
+              <th style={{ padding: '12px', textAlign: 'left' }}>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredStudents.length > 0 ? (
+              filteredStudents.map((student) => (
+                <tr key={student.university_id} style={{ borderBottom: '1px solid #eee' }}>
+                  <td style={{ padding: '12px' }}>{student.university_id}</td>
+                  <td style={{ padding: '12px' }}>{student.first_name} {student.last_name}</td>
+                  <td style={{ padding: '12px' }}>{student.department}</td>
+                  <td style={{ padding: '12px' }}>{student.year_of_study}</td>
+                  <td style={{ padding: '12px' }}>
+                    <Link to={`/students/${student.university_id}`} style={{ color: '#1053ae', fontWeight: 'bold' }}>
+                      View Profile
+                    </Link>
+                  </td>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="5" style={{ padding: '20px', textAlign: 'center', color: '#666' }}>No students found.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       )}
     </Layout>
   );

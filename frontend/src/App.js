@@ -19,6 +19,8 @@ import NewReferral from './pages/NewReferral';
 import UserList from './pages/UserList';
 import DepartmentList from './pages/DepartmentList';
 
+import Profile from './pages/Profile';
+
 import './App.css';
 
 function App() {
@@ -82,6 +84,15 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route
+             path="/profile"
+             element={
+                <ProtectedRoute>
+           <Profile />
+          </ProtectedRoute>
+         }
+      />
 
           <Route
             path="/referrals/new"

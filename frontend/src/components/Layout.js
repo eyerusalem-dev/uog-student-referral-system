@@ -11,11 +11,21 @@ const Layout = ({ children }) => {
     navigate('/login');
   };
 
+  const initials = user?.first_name
+    ? user.first_name.charAt(0).toUpperCase()
+    : user?.username
+    ? user.username.charAt(0).toUpperCase()
+    : 'U';
+
   return (
     <div className="app-layout">
+      {/* Sidebar */}
       <aside className="sidebar">
-        <h2 className="sidebar-title">UOG</h2>
-        <p className="sidebar-subtitle">Referral System</p>
+        <div className="sidebar-header">
+          <div className="sidebar-logo">
+            UOG <span>Hospital</span>
+          </div>
+        </div>
 
         <nav className="sidebar-nav">
           <Link to="/">Dashboard</Link>
@@ -25,7 +35,7 @@ const Layout = ({ children }) => {
               <Link to="/students">Students</Link>
               <Link to="/students/new">Register Student</Link>
               <Link to="/visits/new">New Visit</Link>
-              <Link to="/referrals/new">New Referral</Link>
+            
             </>
           )}
 
@@ -39,21 +49,26 @@ const Layout = ({ children }) => {
           )}
         </nav>
 
-        <button className="logout-button" onClick={handleLogout}>
+        <button className="logout-btn" onClick={handleLogout}>
           Logout
         </button>
       </aside>
 
+      {/* Main */}
       <main className="main-content">
         <header className="topbar">
-          <div>
-            <strong>University of Gondar</strong>
+          <div className="topbar-title">
+            <h2>University of Gondar</h2>
             <p>Student Health Referral and Visit Tracking System</p>
           </div>
 
-          <div className="user-box">
-            <span>{user?.username}</span>
-            <small>{user?.role}</small>
+          <div className="user-profile">
+            <div className="user-info">
+              <div className="name">{user?.username || 'User'}</div>
+              <div className="role">{user?.role || 'Staff'}</div>
+            </div>
+
+            <div className="user-avatar">{initials}</div>
           </div>
         </header>
 

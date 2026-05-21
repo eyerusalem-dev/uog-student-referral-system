@@ -33,27 +33,22 @@ const NewStudent = () => {
     setLoading(true);
     setError('');
 
-    // Prepare data for FormData
+    // Prepare data for FormData (required for file uploads)
     const data = new FormData();
-    
-    // Only append fields that have values
     Object.keys(formData).forEach((key) => {
-      if (formData[key]) {
-        data.append(key, formData[key]);
-      }
+      if (formData[key]) data.append(key, formData[key]);
     });
 
     try {
       await createStudent(data);
       navigate('/students');
     } catch (err) {
-      // Show the real error from the backend
+      console.error(err);
       if (err.response && err.response.data) {
-        setError(err.response.data.detail || err.response.data.non_field_errors || 'Registration failed. Please check your input.');
+        setError(JSON.stringify(err.response.data));
       } else {
-        setError('Failed to register student. Please check your input.');
+        setError('Failed to register student. Check ID format (no slashes).');
       }
-      console.error('Registration Error:', err);
     } finally {
       setLoading(false);
     }
@@ -63,54 +58,55 @@ const NewStudent = () => {
     <Layout>
       <h1>Register New Student</h1>
       
-      {error && <div className="error-box">{error}</div>}
+      {error && <div style={{ background: '#fee2e2', color: '#991b1b', padding: '10px', borderRadius: '8px', marginBottom: '20px' }}>{error}</div>}
 
-      <form onSubmit={handleSubmit} className="form-card">
-        <div className="form-grid">
-          <div className="form-group">
-            <label>University ID (e.g., UOG-2021-045)</label>
-            <input name="university_id" required onChange={handleChange} placeholder="No slashes allowed" />
+      <form onSubmit={handleSubmit} style={{ background: 'white', padding: '24px', borderRadius: '8px', maxWidth: '800px', color: '#333' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>University ID (e.g., UOG-2021-045)</label>
+            <input name="university_id" required onChange={handleChange} placeholder="No slashes allowed" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
           </div>
           
-          <div className="form-group">
-            <label>First Name</label>
-            <input name="first_name" required onChange={handleChange} />
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>First Name</label>
+            <input name="first_name" required onChange={handleChange} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
           </div>
 
-          <div className="form-group">
-            <label>Last Name</label>
-            <input name="last_name" required onChange={handleChange} />
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Last Name</label>
+            <input name="last_name" required onChange={handleChange} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
           </div>
 
-          <div className="form-group">
-            <label>Academic Department</label>
-            <input name="department" required onChange={handleChange} placeholder="e.g. Computer Science" />
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Academic Department</label>
+            <input name="department" required onChange={handleChange} placeholder="e.g. Computer Science" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
           </div>
 
-          <div className="form-group">
-            <label>Year of Study</label>
-            <input type="number" name="year_of_study" required onChange={handleChange} min="1" max="8" />
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Year of Study</label>
+            <input type="number" name="year_of_study" required onChange={handleChange} min="1" max="8" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
           </div>
 
-          <div className="form-group">
-            <label>Phone Number</label>
-            <input name="phone" required onChange={handleChange} />
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Phone Number</label>
+            <input name="phone" required onChange={handleChange} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
           </div>
 
-          <div className="form-group">
-            <label>Emergency Contact</label>
-            <input name="emergency_contact" onChange={handleChange} />
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Emergency Contact</label>
+            <input name="emergency_contact" onChange={handleChange} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
           </div>
 
-          <div className="form-group">
-            <label>Photo (Optional)</label>
-            <input type="file" name="photo" accept="image/*" onChange={handleChange} />
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Photo (Optional)</label>
+            <input type="file" name="photo" accept="image/*" onChange={handleChange} style={{ width: '100%' }} />
           </div>
         </div>
 
-        <div className="form-actions">
-          <button type="button" onClick={() => navigate(-1)} className="btn-secondary">Cancel</button>
-          <button type="submit" disabled={loading} className="btn-primary">
+        <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+          <button type="button" onClick={() => navigate(-1)} style={{ padding: '10px 20px', background: '#6b7280', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+          <button type="submit" disabled={loading} style={{ padding: '10px 20px', background: '#1053ae', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
             {loading ? 'Saving...' : 'Register Student'}
           </button>
         </div>
