@@ -21,6 +21,9 @@ import DepartmentList from './pages/DepartmentList';
 
 import Profile from './pages/Profile';
 
+import LabRequestsPage from './pages/LabRequestsPage';
+import PrescriptionsPage from './pages/PrescriptionsPage';
+
 import './App.css';
 
 function App() {
@@ -103,6 +106,9 @@ function App() {
             }
           />
 
+          <Route path="/users" element={<ProtectedRoute allowedRoles={['admin']}><UserList /></ProtectedRoute>} />
+           <Route path="/departments" element={<ProtectedRoute allowedRoles={['admin']}><DepartmentList /></ProtectedRoute>} />
+
           <Route
             path="/users"
             element={
@@ -120,6 +126,24 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route
+  path="/lab-requests"
+  element={
+    <ProtectedRoute allowedRoles={['lab_technician']}>
+      <LabRequestsPage />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/prescriptions"
+  element={
+    <ProtectedRoute allowedRoles={['pharmacist']}>
+      <PrescriptionsPage />
+    </ProtectedRoute>
+  }
+/>
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

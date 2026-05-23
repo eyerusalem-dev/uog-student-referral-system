@@ -1,7 +1,13 @@
+from django.utils import timezone
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
-from config.permissions import IsClinicianRole, IsAdminRole
+from config.permissions import (
+    IsClinicianRole,
+    IsAdminRole,
+    IsLabTechnicianRole,
+    IsPharmacistRole,
+)
 
 from .models import ClinicalVisit, LabRequest, Prescription
 from .serializers import (
@@ -21,7 +27,6 @@ class ClinicalVisitViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
-
         student_id = self.request.query_params.get('student')
 
         if student_id:
@@ -52,7 +57,6 @@ class LabRequestViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
-
         visit_id = self.request.query_params.get('visit')
         student_id = self.request.query_params.get('student')
 
@@ -68,13 +72,22 @@ class LabRequestViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return [IsAuthenticated(), IsClinicianRole()]
 
-        if self.action in ['update', 'partial_update', 'destroy']:
+        if self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), IsLabTechnicianRole()]
+
+        if self.action == 'destroy':
             return [IsAuthenticated(), IsAdminRole()]
 
         return [IsAuthenticated()]
 
     def perform_create(self, serializer):
         serializer.save(requested_by=self.request.user)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        if instance.status == 'completed' and instance.completed_at is None:
+            instance.completed_at = timezone.now()
+            instance.save(update_fields=['completed_at'])
 
 
 class PrescriptionViewSet(viewsets.ModelViewSet):
@@ -87,7 +100,6 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
-
         visit_id = self.request.query_params.get('visit')
         student_id = self.request.query_params.get('student')
 
@@ -103,10 +115,20 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return [IsAuthenticated(), IsClinicianRole()]
 
-        if self.action in ['update', 'partial_update', 'destroy']:
+        if self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), IsPharmacistRole()]
+
+        if self.action == 'destroy':
             return [IsAuthenticated(), IsAdminRole()]
 
         return [IsAuthenticated()]
 
     def perform_create(self, serializer):
         serializer.save(prescribed_by=self.request.user)
+
+        def perform_update(self, serializer):
+            instance = serializer.save()
+
+        if instance.status == 'dispensed' and instance.dispensed_at is None:
+            instance.dispensed_at = timezone.now()
+            instance.save(update_fields=['dispensed_at'])

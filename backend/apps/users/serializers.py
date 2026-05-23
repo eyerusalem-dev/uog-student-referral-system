@@ -1,7 +1,11 @@
+import re
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 User = get_user_model()
+
+
+ETHIOPIAN_PHONE_REGEX = re.compile(r'^(\+2519\d{8}|2519\d{8})$')
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -26,16 +30,24 @@ class UserSerializer(serializers.ModelSerializer):
             'password': {'write_only': True, 'required': False}
         }
 
+    def validate_phone(self, value):
+        if value:
+            if not ETHIOPIAN_PHONE_REGEX.match(value):
+                raise serializers.ValidationError(
+                    "Phone must be in Ethiopian international format: +2519XXXXXXXX or 2519XXXXXXXX"
+                )
+        return value
+
     def validate(self, attrs):
         role = attrs.get('role', getattr(self.instance, 'role', None))
         department = attrs.get('department', getattr(self.instance, 'department', None))
 
-        if role == 'department_receiver' and department is None:
+        if role == 'intake_team' and department is None:
             raise serializers.ValidationError(
-                "Department receiver users must have a department."
+                "Intake Team users must have a department."
             )
 
-        if role != 'department_receiver':
+        if role != 'intake_team':
             attrs['department'] = None
 
         return attrs
@@ -43,8 +55,10 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         password = validated_data.pop('password', None)
         user = User(**validated_data)
+
         if password:
             user.set_password(password)
+
         user.save()
         return user
 

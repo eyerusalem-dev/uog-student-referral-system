@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
-from config.permissions import IsAdminOrClinician, IsAdminOrDepartmentReceiver, IsAdminRole
+from config.permissions import IsAdminOrClinician, IsAdminOrIntakeTeam, IsAdminRole
 from .models import Referral
 from .serializers import ReferralSerializer
 
@@ -33,7 +33,7 @@ class ReferralViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return [IsAuthenticated(), IsAdminOrClinician()]
         if self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), IsAdminOrDepartmentReceiver()]
+            return [IsAuthenticated(), IsAdminOrIntakeTeam()]
         if self.action == 'destroy':
             return [IsAuthenticated(), IsAdminRole()]
         return [IsAuthenticated()]

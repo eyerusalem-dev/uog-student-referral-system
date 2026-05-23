@@ -222,6 +222,10 @@ const NewVisit = () => {
             </button>
           </div>
 
+          <p style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>
+            Lab requests will be created with status <strong>Pending</strong>. The lab technician will update the result later.
+          </p>
+
           {labRequests.map((lab, index) => (
             <div key={index} style={{ background: '#f9fafb', padding: '16px', borderRadius: '8px', marginBottom: '12px', border: '1px solid #e5e7eb' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
@@ -236,8 +240,8 @@ const NewVisit = () => {
                   <input value={lab.test_name} onChange={(e) => updateLabRequest(index, 'test_name', e.target.value)} style={inputStyle} placeholder="e.g. CBC, X-Ray" required={index === 0} />
                 </div>
                 <div>
-                  <label style={{ ...labelStyle, fontSize: '12px' }}>Reason/Indication</label>
-                  <input value={lab.reason} onChange={(e) => updateLabRequest(index, 'reason', e.target.value)} style={inputStyle} placeholder="Why is this test needed?" />
+                  <label style={{ ...labelStyle, fontSize: '12px' }}>Result / Indication</label>
+                  <input value={lab.reason} onChange={(e) => updateLabRequest(index, 'reason', e.target.value)} style={inputStyle} placeholder="Expected result or clinical indication" />
                 </div>
               </div>
             </div>
@@ -247,7 +251,7 @@ const NewVisit = () => {
         {/* Prescriptions Section */}
         <div style={{ background: 'white', padding: '24px', borderRadius: '12px', marginBottom: '20px', color: '#333' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ margin: 0, fontSize: '16px', color: '#1053ae' }}>💊 Medication Requests</h3>
+            <h3 style={{ margin: 0, fontSize: '16px', color: '#1053ae' }}> Medication Requests</h3>
             <button type="button" onClick={addPrescription} style={{ padding: '6px 12px', background: '#e0e7ff', color: '#1e40af', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
               + Add Medication
             </button>

@@ -27,27 +27,34 @@ const Layout = ({ children }) => {
           </div>
         </div>
 
-        <nav className="sidebar-nav">
-          <Link to="/">Dashboard</Link>
+<nav className="sidebar-nav">
+  <Link to="/">Dashboard</Link>
 
-          {(user?.role === 'admin' || user?.role === 'clinician') && (
-            <>
-              <Link to="/students">Students</Link>
-              <Link to="/students/new">Register Student</Link>
-              <Link to="/visits/new">New Visit</Link>
-            
-            </>
-          )}
+  {(user?.role === 'admin' || user?.role === 'clinician') && (
+    <>
+      <Link to="/students">Students</Link>
+      <Link to="/students/new">Register Student</Link>
+      <Link to="/visits/new">New Visit</Link>
+    </>
+  )}
 
-          <Link to="/referrals">Referrals</Link>
+  <Link to="/referrals">Referrals</Link>
 
-          {user?.role === 'admin' && (
-            <>
-              <Link to="/users">Users</Link>
-              <Link to="/departments">Departments</Link>
-            </>
-          )}
-        </nav>
+  {user?.role === 'lab_technician' && (
+    <Link to="/lab-requests">Lab Requests</Link>
+  )}
+
+  {user?.role === 'pharmacist' && (
+    <Link to="/prescriptions">Prescriptions</Link>
+  )}
+
+  {user?.role === 'admin' && (
+    <>
+      <Link to="/users">Users</Link>
+      <Link to="/departments">Departments</Link>
+    </>
+  )}
+</nav>
 
         <button className="logout-btn" onClick={handleLogout}>
           Logout

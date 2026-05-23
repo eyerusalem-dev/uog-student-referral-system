@@ -18,6 +18,7 @@ class LabRequestSerializer(serializers.ModelSerializer):
             'requested_by',
             'requested_by_username',
             'status',
+            'result_note',
             'created_at',
             'completed_at',
         ]
@@ -47,6 +48,7 @@ class PrescriptionSerializer(serializers.ModelSerializer):
             'prescribed_by',
             'prescribed_by_username',
             'status',
+            'dispense_note',
             'created_at',
             'dispensed_at',
         ]
@@ -76,36 +78,27 @@ class ClinicalVisitSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ClinicalVisit
-
         fields = [
             'id',
-
             'student',
             'student_university_id',
             'student_name',
-
             'clinician',
             'clinician_username',
-
             'symptoms',
             'diagnosis',
             'advice',
             'treatment',
             'note',
-
             'lab_used',
             'lab_note',
-
             'pharmacy_used',
             'medication_given',
-
             'lab_requests',
             'prescriptions',
-
             'visit_date',
             'is_locked',
         ]
-
         read_only_fields = [
             'clinician',
             'visit_date',
@@ -118,34 +111,15 @@ class ClinicalVisitSerializer(serializers.ModelSerializer):
         return f"{obj.student.first_name} {obj.student.last_name}"
 
     def validate(self, attrs):
-        lab_used = attrs.get(
-            'lab_used',
-            getattr(self.instance, 'lab_used', False)
-        )
-
-        lab_note = attrs.get(
-            'lab_note',
-            getattr(self.instance, 'lab_note', '')
-        )
-
-        pharmacy_used = attrs.get(
-            'pharmacy_used',
-            getattr(self.instance, 'pharmacy_used', False)
-        )
-
-        medication_given = attrs.get(
-            'medication_given',
-            getattr(self.instance, 'medication_given', '')
-        )
+        lab_used = attrs.get('lab_used', getattr(self.instance, 'lab_used', False))
+        lab_note = attrs.get('lab_note', getattr(self.instance, 'lab_note', ''))
+        pharmacy_used = attrs.get('pharmacy_used', getattr(self.instance, 'pharmacy_used', False))
+        medication_given = attrs.get('medication_given', getattr(self.instance, 'medication_given', ''))
 
         if lab_used and not lab_note:
-            raise serializers.ValidationError(
-                "Add a lab note if lab was used."
-            )
+            raise serializers.ValidationError("Add a lab note if lab was used.")
 
         if pharmacy_used and not medication_given:
-            raise serializers.ValidationError(
-                "Add medication details if pharmacy was used."
-            )
+            raise serializers.ValidationError("Add medication details if pharmacy was used.")
 
         return attrs

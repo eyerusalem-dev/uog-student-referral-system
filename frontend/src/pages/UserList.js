@@ -1,28 +1,17 @@
-import React, { useEffect, useState } from "react";
-import Layout from "../components/Layout";
-import { getUsers, createUser, updateUser, deleteUser, getDepartments } from "../services/api";
+import React, { useEffect, useState } from 'react';
+import Layout from '../components/Layout';
+import { getUsers, getDepartments, createUser, updateUser } from '../services/api';
 
 const UserList = () => {
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
-  const emptyForm = {
-    username: "",
-    password: "",
-    email: "",
-    first_name: "",
-    last_name: "",
-    phone: "",
-    role: "clinician",
-    department: "",
-  };
-
-  const [formData, setFormData] = useState(emptyForm);
+  const [formData, setFormData] = useState({
+    username: '', password: '', email: '', first_name: '', last_name: '',
+    role: 'clinician', department: '', phone: '', is_active: true
+  });
 
   useEffect(() => {
     fetchData();
@@ -30,306 +19,107 @@ const UserList = () => {
 
   const fetchData = async () => {
     try {
-      const [usersRes, deptsRes] = await Promise.all([
-        getUsers(),
-        getDepartments(),
-      ]);
-      setUsers(usersRes.data);
-      setDepartments(deptsRes.data);
+      const [uRes, dRes] = await Promise.all([getUsers(), getDepartments()]);
+      setUsers(uRes.data);
+      setDepartments(dRes.data.filter(d => d.is_active !== false));
     } catch (err) {
-      console.error("Failed to fetch data:", err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleEdit = (user) => {
-    setEditing(user.id);
-    setFormData({
-      username: user.username,
-      password: "",
-      email: user.email || "",
-      first_name: user.first_name || "",
-      last_name: user.last_name || "",
-      phone: user.phone || "",
-      role: user.role,
-      department: user.department || "",
-    });
-    setShowForm(true);
-    setError("");
-    setSuccess("");
-  };
-
-  const handleNew = () => {
-    setEditing(null);
-    setFormData(emptyForm);
-    setShowForm(true);
-    setError("");
-    setSuccess("");
-  };
-
-  const handleCancel = () => {
-    setShowForm(false);
-    setEditing(null);
-    setFormData(emptyForm);
-    setError("");
-  };
-
-  const handleSubmit = async (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
-
-    const payload = { ...formData };
-
-    if (payload.role !== "department_receiver") {
-      payload.department = null;
-    }
-
-    if (editing && !payload.password) {
-      delete payload.password;
-    }
-
     try {
-      if (editing) {
-        await updateUser(editing, payload);
-        setSuccess("User updated successfully.");
-      } else {
-        await createUser(payload);
-        setSuccess("User created successfully.");
-      }
-
-      fetchData();
+      await createUser(formData);
       setShowForm(false);
-      setEditing(null);
-      setFormData(emptyForm);
-    } catch (err) {
-      if (err.response?.data) {
-        setError(JSON.stringify(err.response.data));
-      } else {
-        setError("Failed to save user.");
-      }
-    }
-  };
-
-  const handleDelete = async (id, username) => {
-    if (!window.confirm(`Are you sure you want to delete user "${username}"?`)) {
-      return;
-    }
-
-    try {
-      await deleteUser(id);
-      setSuccess(`User "${username}" deleted.`);
+      setFormData({ username: '', password: '', email: '', first_name: '', last_name: '', role: 'clinician', department: '', phone: '', is_active: true });
       fetchData();
     } catch (err) {
-      setError("Failed to delete user.");
+      alert('Failed to create user');
     }
   };
 
-  const getRoleLabel = (role) => {
-    if (role === "admin") return "Administrator";
-    if (role === "clinician") return "Clinician";
-    if (role === "department_receiver") return "Dept. Receiver";
-    return role;
+  const toggleActive = async (user) => {
+    try {
+      await updateUser(user.id, { is_active: !user.is_active });
+      fetchData();
+    } catch (err) {
+      alert('Failed to update user');
+    }
   };
+
+  const inputStyle = { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '6px', border: '1px solid #ccc' };
 
   return (
     <Layout>
-      <div className="page-header">
-        <h1 style={{ color: "rgba(255,255,255,0.95)", fontSize: "24px" }}>
-          User Management
-        </h1>
-        <button className="btn-primary" onClick={handleNew}>
-          + New User
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h1>User Management</h1>
+        <button onClick={() => setShowForm(!showForm)} style={{ padding: '10px 20px', background: '#1053ae', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+          {showForm ? 'Cancel' : '+ New User'}
         </button>
       </div>
 
-      {success && (
-        <div style={{
-          background: "rgba(34,197,94,0.12)",
-          border: "1px solid rgba(34,197,94,0.25)",
-          color: "#22c55e",
-          padding: "12px 16px",
-          borderRadius: "10px",
-          marginBottom: "20px",
-          fontSize: "14px",
-        }}>
-          {success}
-        </div>
-      )}
-
-      {error && <div className="error-box">{error}</div>}
-
       {showForm && (
-        <div className="form-card" style={{ marginBottom: "24px" }}>
-          <h2 style={{
-            color: "rgba(255,255,255,0.9)",
-            fontSize: "18px",
-            marginBottom: "20px",
-          }}>
-            {editing ? "Edit User" : "Create New User"}
-          </h2>
-
-          <form onSubmit={handleSubmit}>
-            <div className="form-grid">
-              <div className="form-group">
-                <label>Username *</label>
-                <input
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  required
-                  disabled={!!editing}
-                  placeholder="Enter username"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>{editing ? "New Password (leave blank to keep)" : "Password *"}</label>
-                <input
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required={!editing}
-                  placeholder="Enter password"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>First Name</label>
-                <input
-                  name="first_name"
-                  value={formData.first_name}
-                  onChange={handleChange}
-                  placeholder="First name"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Last Name</label>
-                <input
-                  name="last_name"
-                  value={formData.last_name}
-                  onChange={handleChange}
-                  placeholder="Last name"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Email</label>
-                <input
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="email@uog.edu.et"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Phone</label>
-                <input
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  placeholder="09..."
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Role *</label>
-                <select name="role" value={formData.role} onChange={handleChange}>
-                  <option value="clinician">Clinician</option>
-                  <option value="department_receiver">Department Receiver</option>
-                  <option value="admin">Administrator</option>
-                </select>
-              </div>
-
-              {formData.role === "department_receiver" && (
-                <div className="form-group">
-                  <label>Department *</label>
-                  <select
-                    name="department"
-                    value={formData.department}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="">Select department</option>
-                    {departments.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-
-            <div className="form-actions">
-              <button type="button" className="btn-secondary" onClick={handleCancel}>
-                Cancel
-              </button>
-              <button type="submit" className="btn-primary">
-                {editing ? "Update User" : "Create User"}
-              </button>
-            </div>
-          </form>
-        </div>
+        <form onSubmit={handleCreate} style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', color: '#333' }}>
+          <h3>Create User</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <input placeholder="Username" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} required style={inputStyle} />
+            <input placeholder="Password" type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required style={inputStyle} />
+            <input placeholder="Email" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} style={inputStyle} />
+            <input placeholder="First Name" value={formData.first_name} onChange={e => setFormData({...formData, first_name: e.target.value})} style={inputStyle} />
+            <input placeholder="Last Name" value={formData.last_name} onChange={e => setFormData({...formData, last_name: e.target.value})} style={inputStyle} />
+            <input placeholder="Phone" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} style={inputStyle} />
+            <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} style={inputStyle}>
+              <option value="admin">Administrator</option>
+              <option value="clinician">Clinician</option>
+              <option value="department_receiver">Department Receiver</option>
+              <option value="lab_technician">Lab Technician</option>
+              <option value="pharmacist">Pharmacist</option>
+            </select>
+            <select value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})} style={inputStyle}>
+              <option value="">No Department</option>
+              {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </div>
+          <button type="submit" style={{ padding: '10px 20px', background: '#1053ae', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Create User</button>
+        </form>
       )}
 
-      {loading ? (
-        <p className="muted">Loading users...</p>
-      ) : (
-        <div className="table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Username</th>
-                <th>Name</th>
-                <th>Role</th>
-                <th>Department</th>
-                <th>Active</th>
-                <th>Actions</th>
+      {loading ? <p>Loading...</p> : (
+        <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', color: '#333', borderRadius: '8px', overflow: 'hidden' }}>
+          <thead style={{ background: '#f3f4f6' }}>
+            <tr>
+              <th style={{ padding: '12px', textAlign: 'left' }}>Username</th>
+              <th style={{ padding: '12px', textAlign: 'left' }}>Name</th>
+              <th style={{ padding: '12px', textAlign: 'left' }}>Role</th>
+              <th style={{ padding: '12px', textAlign: 'left' }}>Department</th>
+              <th style={{ padding: '12px', textAlign: 'left' }}>Status</th>
+              <th style={{ padding: '12px', textAlign: 'left' }}>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map(u => (
+              <tr key={u.id} style={{ borderBottom: '1px solid #eee' }}>
+                <td style={{ padding: '12px' }}>{u.username}</td>
+                <td style={{ padding: '12px' }}>{u.first_name} {u.last_name}</td>
+                <td style={{ padding: '12px' }}>{u.role}</td>
+                <td style={{ padding: '12px' }}>{u.department_name || '—'}</td>
+                <td style={{ padding: '12px' }}>
+                  <span style={{ padding: '4px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold', background: u.is_active ? '#d1fae5' : '#fee2e2', color: u.is_active ? '#065f46' : '#991b1b' }}>
+                    {u.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
+                <td style={{ padding: '12px' }}>
+                  <button onClick={() => toggleActive(u)} style={{ padding: '6px 12px', background: u.is_active ? '#ef4444' : '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                    {u.is_active ? 'Deactivate' : 'Activate'}
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id}>
-                  <td>{u.username}</td>
-                  <td>{u.first_name} {u.last_name}</td>
-                  <td>
-                    <span className={`badge ${u.role}`}>
-                      {getRoleLabel(u.role)}
-                    </span>
-                  </td>
-                  <td>{u.department_name || "—"}</td>
-                  <td>{u.is_active ? "✅" : "❌"}</td>
-                  <td>
-                    <button
-                      className="btn-accept"
-                      style={{ fontSize: "12px", padding: "5px 12px" }}
-                      onClick={() => handleEdit(u)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="btn-decline"
-                      style={{ fontSize: "12px", padding: "5px 12px", marginLeft: "6px" }}
-                      onClick={() => handleDelete(u.id, u.username)}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       )}
     </Layout>
   );
