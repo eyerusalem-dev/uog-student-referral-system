@@ -105,13 +105,13 @@ const ReferralList = () => {
                         </div>
                       </td>
 
-                      {user?.role === 'department_receiver' && ref.status === 'pending' && (
+                      {user?.role === 'intake_team' && ref.status === 'pending' && (
                         <td style={{ padding: '12px' }}>
                           <button onClick={() => handleStatusChange(ref.referral_id, 'accepted')} disabled={actionLoading === ref.referral_id} style={{ padding: '6px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '5px' }}>Accept</button>
                           <button onClick={() => handleStatusChange(ref.referral_id, 'declined')} disabled={actionLoading === ref.referral_id} style={{ padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Decline</button>
                         </td>
                       )}
-                      {user?.role === 'department_receiver' && ref.status !== 'pending' && (
+                      {user?.role === 'intake_team' && ref.status !== 'pending' && (
                         <td style={{ padding: '12px', fontSize: '12px', color: '#666' }}>{ref.response_note || 'No note'}</td>
                       )}
                     </tr>

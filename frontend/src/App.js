@@ -21,6 +21,10 @@ import DepartmentList from './pages/DepartmentList';
 
 import Profile from './pages/Profile';
 
+import Reports from './pages/Reports';
+
+import AuditLogPage from './pages/AuditLogPage';
+
 import LabRequestsPage from './pages/LabRequestsPage';
 import PrescriptionsPage from './pages/PrescriptionsPage';
 
@@ -128,6 +132,24 @@ function App() {
           />
 
           <Route
+  path="/audit-logs"
+  element={
+    <ProtectedRoute allowedRoles={['admin']}>
+      <AuditLogPage />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/reports"
+  element={
+    <ProtectedRoute allowedRoles={['admin']}>
+      <Reports />
+    </ProtectedRoute>
+  }
+/>
+
+          <Route
   path="/lab-requests"
   element={
     <ProtectedRoute allowedRoles={['lab_technician']}>
@@ -144,6 +166,8 @@ function App() {
     </ProtectedRoute>
   }
 />
+
+
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

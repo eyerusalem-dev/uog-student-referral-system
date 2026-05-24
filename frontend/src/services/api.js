@@ -93,5 +93,6 @@ export const createPrescription = (data) =>
 export const updatePrescription = (id, data) =>
   api.patch(`/visits/prescriptions/${id}/`, data);
 
+export const getDashboardStats = () => api.get('/reports/dashboard/');
 
 export default api;
