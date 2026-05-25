@@ -15,7 +15,7 @@ const Profile = () => {
   const getRoleLabel = () => {
     if (user?.role === "admin") return "Administrator";
     if (user?.role === "clinician") return "Clinic Clinician";
-    if (user?.role === "department_receiver") return "Department Receiver";
+    if (user?.role === "intake_team") return "Intake Team";
     return user?.role || "User";
   };
 

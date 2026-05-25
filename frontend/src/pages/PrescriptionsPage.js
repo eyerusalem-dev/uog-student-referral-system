@@ -64,60 +64,100 @@ const PrescriptionsPage = () => {
 
   return (
     <Layout>
-      <h1>Prescriptions</h1>
-      <p style={{ color: '#999', marginBottom: '20px' }}>
+      <h1 style={{ fontSize: '36px', margin: '0 0 8px 0', color: '#fff' }}>Prescriptions</h1>
+      <p style={{ color: 'var(--text-muted)', marginBottom: '30px', fontSize: '15px' }}>
         Manage medication requests. Mark as Dispensed or Out of Stock.
       </p>
 
       {loading ? (
-        <p>Loading prescriptions...</p>
+        <p style={{ color: 'var(--text-muted)' }}>Loading prescriptions...</p>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', color: '#333', borderRadius: '8px', overflow: 'hidden' }}>
-          <thead style={{ background: '#f3f4f6' }}>
-            <tr>
-              <th style={{ padding: '12px', textAlign: 'left' }}>Medication</th>
-              <th style={{ padding: '12px', textAlign: 'left' }}>Dose / Frequency / Duration</th>
-              <th style={{ padding: '12px', textAlign: 'left' }}>Created</th>
-              <th style={{ padding: '12px', textAlign: 'left' }}>Status</th>
-              <th style={{ padding: '12px', textAlign: 'left' }}>Note</th>
-              <th style={{ padding: '12px', textAlign: 'left' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {prescriptions.length > 0 ? (
-              prescriptions.map((rx) => {
+        <div className="dash-card" style={{ padding: 0, overflowX: 'auto' }}>
+          <div style={{ minWidth: '800px' }}>
+            <div style={{
+              display: 'grid', 
+              gridTemplateColumns: 'minmax(200px, 2fr) minmax(180px, 1.5fr) minmax(150px, 1.5fr) minmax(120px, 1fr) minmax(150px, 1fr) minmax(120px, 1fr)',
+              alignItems: 'center', 
+              padding: '20px 24px', 
+              borderBottom: '1px solid rgba(255,255,255,0.05)',
+              color: 'var(--text-muted)',
+              fontWeight: '600',
+              fontSize: '12px',
+              textTransform: 'uppercase',
+              letterSpacing: '1px'
+            }}>
+              <div>Medication</div>
+              <div>Dose / Freq / Dur</div>
+              <div>Created</div>
+              <div>Status</div>
+              <div>Note</div>
+              <div>Actions</div>
+            </div>
+            
+            {[...prescriptions].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).length > 0 ? (
+              [...prescriptions].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map((rx, i, arr) => {
                 const created = formatUTC(rx.created_at);
                 return (
-                  <tr key={rx.id} style={{ borderBottom: '1px solid #eee' }}>
-                    <td style={{ padding: '12px', fontWeight: '600' }}>{rx.medication_name}</td>
-                    <td style={{ padding: '12px' }}>{rx.dosage || '—'} / {rx.frequency || '—'} / {rx.duration || '—'}</td>
-                    <td style={{ padding: '12px' }}>
+                  <div key={rx.id} style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'minmax(200px, 2fr) minmax(180px, 1.5fr) minmax(150px, 1.5fr) minmax(120px, 1fr) minmax(150px, 1fr) minmax(120px, 1fr)',
+                    alignItems: 'center', 
+                    padding: '20px 24px', 
+                    borderBottom: i === arr.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)',
+                    gap: '16px'
+                  }}>
+                    <div style={{ color: '#f8fafc', fontWeight: '600', fontSize: '15px' }}>{rx.medication_name}</div>
+                    
+                    <div style={{ color: '#e2e8f0', fontSize: '14px' }}>
+                      {rx.dosage || '—'} / {rx.frequency || '—'} / {rx.duration || '—'}
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', color: 'var(--text-muted)', fontSize: '13px' }}>
                       <div>{created.date}</div>
-                      <small style={{ color: '#666' }}>{created.time}</small>
-                    </td>
-                    <td style={{ padding: '12px' }}><span style={badgeStyle(rx.status)}>{rx.status}</span></td>
-                    <td style={{ padding: '12px' }}>{rx.dispense_note || '—'}</td>
-                    <td style={{ padding: '12px' }}>
-                      {rx.status === 'pending' && (
+                      <div>{created.time}</div>
+                    </div>
+                    
+                    <div>
+                      <span style={{ 
+                        display: 'inline-block',
+                        background: rx.status === 'pending' ? 'rgba(245, 158, 11, 0.1)' : rx.status === 'dispensed' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                        color: rx.status === 'pending' ? '#f59e0b' : rx.status === 'dispensed' ? '#10b981' : '#ef4444',
+                        padding: '4px 16px', 
+                        borderRadius: '16px', 
+                        fontSize: '12px', 
+                        fontWeight: '500',
+                        textTransform: 'capitalize'
+                      }}>
+                        {rx.status.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+
+                    <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                      {rx.dispense_note || '—'}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
+                      {rx.status === 'pending' ? (
                         <>
-                          <button onClick={() => handleUpdate(rx.id, 'dispensed')} disabled={actionLoading === rx.id} style={{ padding: '6px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '5px' }}>
-                            Dispense
+                          <button onClick={() => handleUpdate(rx.id, 'dispensed')} disabled={actionLoading === rx.id} style={{ background: 'transparent', color: '#10b981', border: 'none', fontWeight: '600', fontSize: '14px', cursor: 'pointer', padding: 0 }}>
+                            {actionLoading === rx.id ? '...' : 'Dispense'}
                           </button>
-                          <button onClick={() => handleUpdate(rx.id, 'out_of_stock')} disabled={actionLoading === rx.id} style={{ padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                            Out of Stock
+                          <button onClick={() => handleUpdate(rx.id, 'out_of_stock')} disabled={actionLoading === rx.id} style={{ background: 'transparent', color: 'var(--text-muted)', border: 'none', fontWeight: '500', fontSize: '12px', cursor: 'pointer', padding: 0 }}>
+                            No Stock
                           </button>
                         </>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Done</span>
                       )}
-                      {rx.status !== 'pending' && <span style={{ color: '#666', fontSize: '13px' }}>Done</span>}
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 );
               })
             ) : (
-              <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#666' }}>No prescriptions found.</td></tr>
+              <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>No prescriptions found.</div>
             )}
-          </tbody>
-        </table>
+          </div>
+        </div>
       )}
     </Layout>
   );

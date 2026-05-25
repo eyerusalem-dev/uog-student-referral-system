@@ -1,19 +1,20 @@
 /* ===== GLOBAL VARIABLES & BASE STYLES ===== */
 :root {
-  --bg-dark: #060e2d;
-  --sidebar-bg: #051438;
-  --primary-blue: #1053ae;
-  --text-main: #ffffff;
-  --text-muted: rgba(255, 255, 255, 0.65);
-  --card-bg: rgba(255, 255, 255, 0.05);
-  --card-border: rgba(255, 255, 255, 0.1);
-  --hover-bg: rgba(16, 83, 174, 0.2);
+  --bg-gradient: linear-gradient(135deg, #07122a 0%, #0a1128 100%);
+  --sidebar-bg: transparent;
+  --primary-blue: #1b64f2;
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --card-bg: rgba(17, 24, 39, 0.6);
+  --card-border: rgba(255, 255, 255, 0.05);
+  --hover-bg: rgba(27, 100, 242, 0.1);
+  --topbar-bg: transparent;
 }
 
 body {
   margin: 0;
   font-family: "Open Sans", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
-  background-color: var(--bg-dark);
+  background: var(--bg-gradient);
   color: var(--text-main);
   overflow-x: hidden;
 }
@@ -32,11 +33,11 @@ a {
 /* ===== SIDEBAR ===== */
 .sidebar {
   width: 260px;
-  background-color: var(--sidebar-bg);
+  background: transparent;
   display: flex;
   flex-direction: column;
-  padding: 24px 0;
-  border-right: 1px solid var(--card-border);
+  padding: 0;
+  border-right: none;
   position: fixed;
   height: 100vh;
   left: 0;
@@ -45,20 +46,19 @@ a {
 }
 
 .sidebar-header {
-  padding: 0 24px 24px;
-  border-bottom: 1px solid var(--card-border);
-  margin-bottom: 20px;
+  height: 80px;
+  box-sizing: border-box;
+  padding: 0;
+  border-bottom: none;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  background: transparent;
 }
 
 .sidebar-logo {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: 1px;
-  color: var(--text-main);
-}
-
-.sidebar-logo span {
-  color: var(--primary-blue);
+  display: flex;
+  align-items: center;
 }
 
 .sidebar-nav {
@@ -69,20 +69,36 @@ a {
   padding: 0 12px;
 }
 
-.sidebar-nav a {
+.nav-item {
   padding: 12px 16px;
-  border-radius: 10px;
+  border-radius: 8px;
   color: var(--text-muted);
   font-size: 14px;
   font-weight: 500;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
 }
 
-.sidebar-nav a:hover {
-  background-color: var(--hover-bg);
+.nav-item:hover {
   color: var(--text-main);
+}
+
+.nav-item.active {
+  background-color: var(--primary-blue);
+  color: #fff;
+}
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  opacity: 0.8;
+}
+
+.nav-item.active .nav-icon {
+  opacity: 1;
 }
 
 .logout-btn {
@@ -116,10 +132,12 @@ a {
 /* ===== TOPBAR ===== */
 .topbar {
   height: 80px;
-  background: rgba(6, 14, 45, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--card-border);
+  box-sizing: border-box;
+  background: rgba(10, 17, 40, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -139,6 +157,70 @@ a {
   margin: 4px 0 0;
   font-size: 13px;
   color: var(--text-muted);
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  padding: 8px 16px;
+  width: 250px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.search-icon {
+  color: var(--text-muted);
+  margin-right: 8px;
+}
+
+.search-bar input {
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  outline: none;
+  font-size: 14px;
+  width: 100%;
+}
+
+.topbar-icons {
+  display: flex;
+  gap: 10px;
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: var(--text-main);
+}
+
+.notification-dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  background: #ef4444;
+  border-radius: 50%;
 }
 
 .user-profile {
@@ -161,6 +243,8 @@ a {
 
 .user-info {
   text-align: right;
+  display: flex;
+  flex-direction: column;
 }
 
 .user-info .name {
@@ -256,4 +340,4 @@ a {
 
 .badge.admin { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
 .badge.clinician { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
-.badge.department_receiver { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+.badge.intake_team { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }

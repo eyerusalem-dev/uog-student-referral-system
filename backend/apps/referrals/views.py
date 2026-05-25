@@ -178,3 +178,35 @@ def dashboard_stats(request):
 
         'utc_month_start': start_of_month.isoformat(),
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminRole])
+def students_referred_this_month(request):
+    """
+    Admin-only: Returns list of students referred this month with their referral details.
+    """
+    now = timezone.now()
+    start_of_month = datetime(now.year, now.month, 1, tzinfo=dt_timezone.utc)
+
+    referrals = Referral.objects.select_related(
+        'student', 'referred_by', 'receiving_department'
+    ).filter(created_at__gte=start_of_month).order_by('-created_at')
+
+    data = []
+    for ref in referrals:
+        data.append({
+            'referral_id': ref.referral_id,
+            'student_university_id': ref.student.university_id,
+            'student_name': f"{ref.student.first_name} {ref.student.last_name}",
+            'student_department': ref.student.department,
+            'student_year': ref.student.year_of_study,
+            'referred_by': f"{ref.referred_by.first_name or ref.referred_by.username} {ref.referred_by.last_name or ''}".strip(),
+            'referred_by_id': ref.referred_by.id,
+            'receiving_department': ref.receiving_department.name if ref.receiving_department else 'N/A',
+            'status': ref.status,
+            'created_at': ref.created_at.isoformat(),
+            'has_clinical_visit': ref.clinical_visit is not None,
+        })
+
+    return Response(data)

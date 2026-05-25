@@ -37,13 +37,15 @@ export const getCurrentUser = () => api.get('/auth/user/');
 export const changePassword = (data) => api.post('/auth/change-password/', data);
 
 /* =========================
-   USERS
+    USERS
 ========================= */
 export const getUsers = () => api.get('/users/');
 export const getUser = (id) => api.get(`/users/${id}/`);
 export const createUser = (data) => api.post('/users/', data);
 export const updateUser = (id, data) => api.patch(`/users/${id}/`, data);
 export const deleteUser = (id) => api.delete(`/users/${id}/`);
+export const adminForcePasswordChange = (id, newPassword) => 
+  api.post(`/users/${id}/force-password-change/`, { new_password: newPassword });
 
 /* =========================
    DEPARTMENTS
@@ -94,5 +96,11 @@ export const updatePrescription = (id, data) =>
   api.patch(`/visits/prescriptions/${id}/`, data);
 
 export const getDashboardStats = () => api.get('/reports/dashboard/');
+export const getStudentsReferredThisMonth = () => api.get('/reports/students-this-month/');
+
+/* =========================
+   AUDIT LOGS
+========================= */
+export const getAuditLogs = () => api.get('/audit-logs/');
 
 export default api;
