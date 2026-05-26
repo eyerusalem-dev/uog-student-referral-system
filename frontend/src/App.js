@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import './App.css';
 
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -28,7 +29,7 @@ import AuditLogPage from './pages/AuditLogPage';
 import LabRequestsPage from './pages/LabRequestsPage';
 import PrescriptionsPage from './pages/PrescriptionsPage';
 
-import './App.css';
+
 
 function App() {
   return (

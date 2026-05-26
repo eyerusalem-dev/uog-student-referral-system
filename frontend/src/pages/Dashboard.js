@@ -39,6 +39,33 @@ const Dashboard = () => {
     hour12: true
   }).format(currentTime) + ' UTC';
   
+  // Clinician State
+  const [clinicianFilter, setClinicianFilter] = useState('All');
+  const [clinicianSearch, setClinicianSearch] = useState('');
+
+  const mockClinicianPatients = [
+    { initials: 'BH', color: '#10b981', name: 'Bereket Haile', id: 'UOG/14321/17', status: 'Done', sColor: '#10b981', refStatus: 'Accepted', visit: 'Today, 09:45 AM', cc: 'Persistent cough, low-grade fever', dx: 'Upper respiratory tract infection' },
+    { initials: 'LT', color: '#8b5cf6', name: 'Liya Tadesse', id: 'UOG/06543/16', status: 'Waiting for lab', sColor: '#f59e0b', refStatus: 'Pending', visit: 'Today, 10:15 AM', cc: 'Recurrent wheezing, chest tightness', dx: 'Asthma exacerbation' },
+    { initials: 'YB', color: '#f59e0b', name: 'Yohannes Bekele', id: 'UOG/07122/16', status: 'Done', sColor: '#10b981', refStatus: 'Accepted', visit: 'Today, 10:00 AM', cc: 'Increased thirst, frequent urination', dx: 'Type 2 Diabetes' },
+    { initials: 'AG', color: '#ef4444', name: 'Abel Getachew', id: 'UOG/10234/15', status: 'Waiting for lab', sColor: '#f59e0b', refStatus: 'Pending', visit: 'Today, 08:30 AM', cc: 'Chronic headache, blurry vision', dx: 'Migraine' },
+    { initials: 'SM', color: '#3b82f6', name: 'Sara Mengistu', id: 'UOG/18334/18', status: 'Done', sColor: '#10b981', refStatus: 'Accepted', visit: 'Today, 07:50 AM', cc: 'Abdominal pain, nausea', dx: 'Acute gastroenteritis' },
+    { initials: 'DF', color: '#1b64f2', name: 'Daniel Fikru', id: 'UOG/22456/17', status: 'Waiting for lab', sColor: '#f59e0b', refStatus: 'Pending', visit: 'Today, 11:20 AM', cc: 'Ankle sprain after sports', dx: 'Grade II ankle sprain' },
+  ];
+
+  const filteredClinicianPatients = mockClinicianPatients.filter(pt => {
+    const matchesSearch = pt.name.toLowerCase().includes(clinicianSearch.toLowerCase()) || 
+                          pt.cc.toLowerCase().includes(clinicianSearch.toLowerCase()) || 
+                          pt.dx.toLowerCase().includes(clinicianSearch.toLowerCase()) ||
+                          pt.id.toLowerCase().includes(clinicianSearch.toLowerCase());
+    
+    if (!matchesSearch) return false;
+    
+    if (clinicianFilter === 'All') return true;
+    if (clinicianFilter === 'Lab process') return pt.status === 'Waiting for lab';
+    if (clinicianFilter === 'Pending referrals') return pt.refStatus === 'Pending';
+    return true;
+  });
+
   // Lab Technician State
   const [labFilter, setLabFilter] = useState('All');
   const [labSearch, setLabSearch] = useState('');
@@ -135,7 +162,7 @@ const Dashboard = () => {
 
   return (
     <Layout>
-      {user?.role !== 'pharmacist' && user?.role !== 'lab_technician' && (
+      {user?.role !== 'pharmacist' && user?.role !== 'lab_technician' && user?.role !== 'clinician' && (
         <>
           <h1 style={{ fontSize: '36px', margin: '0 0 8px 0', color: '#fff' }}>
             {user?.role === 'admin' ? 'Admin Dashboard' : `Hi, ${user?.username || 'User'}`}
@@ -299,88 +326,20 @@ const Dashboard = () => {
 
 
       {user?.role === 'clinician' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '32px', alignItems: 'start' }}>
           
-          {/* Quick Actions (Row 1) */}
-          <div className="dash-card" style={{ padding: '24px', borderRadius: '16px' }}>
-            <h3 style={{ margin: '0 0 24px 0', fontSize: '18px', color: '#fff', fontWeight: '700' }}>Quick Actions</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '20px' }}>
-              {/* Button 1: New Visit */}
-              <Link to="/students/new" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '12px', textDecoration: 'none', transition: 'all 0.2s' }} className="hover-card">
-                <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', marginBottom: '16px' }}>+</div>
-                <span style={{ color: '#fff', fontSize: '15px', fontWeight: '600' }}>New Visit</span>
-              </Link>
-              {/* Button 2: Write Rx */}
-              <Link to="/prescriptions/new" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '12px', textDecoration: 'none', transition: 'all 0.2s' }} className="hover-card">
-                <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
-                  <ReportIcon style={{ width: '28px', height: '28px' }} />
-                </div>
-                <span style={{ color: '#fff', fontSize: '15px', fontWeight: '600' }}>Write Rx</span>
-              </Link>
-              {/* Button 3: Order Lab */}
-              <Link to="/labs/new" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '12px', textDecoration: 'none', transition: 'all 0.2s' }} className="hover-card">
-                <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: 'rgba(168, 85, 247, 0.1)', color: '#a855f7', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
-                  <div style={{ width: '24px', height: '28px', border: '2px solid currentColor', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px', borderTopLeftRadius: '4px', borderTopRightRadius: '4px', position: 'relative' }}>
-                     <div style={{ position: 'absolute', bottom: '2px', left: '2px', right: '2px', height: '12px', background: 'currentColor', borderRadius: '0 0 8px 8px', opacity: '0.4' }}></div>
-                  </div>
-                </div>
-                <span style={{ color: '#fff', fontSize: '15px', fontWeight: '600' }}>Order Lab</span>
-              </Link>
-              {/* Button 4: Refer Out */}
-              <Link to="/referrals/new" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '12px', textDecoration: 'none', transition: 'all 0.2s' }} className="hover-card">
-                <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-                </div>
-                <span style={{ color: '#fff', fontSize: '15px', fontWeight: '600' }}>Refer Out</span>
-              </Link>
-            </div>
-          </div>
-
-          {/* Metrics (Row 2) */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-            <div className="dash-card" style={{ padding: '24px', borderRadius: '16px', border: '1px solid rgba(59, 130, 246, 0.2)', background: 'linear-gradient(145deg, rgba(59, 130, 246, 0.05) 0%, transparent 100%)' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-                <UsersIcon style={{ width: '20px', height: '20px' }} />
-              </div>
-              <h2 style={{ fontSize: '36px', margin: '0 0 8px 0', color: '#3b82f6', fontWeight: '700' }}>6</h2>
-              <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '14px', fontWeight: '500' }}>Today's Patients</p>
-            </div>
-            <div className="dash-card" style={{ padding: '24px', borderRadius: '16px', border: '1px solid rgba(16, 185, 129, 0.2)', background: 'linear-gradient(145deg, rgba(16, 185, 129, 0.05) 0%, transparent 100%)' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              </div>
-              <h2 style={{ fontSize: '36px', margin: '0 0 8px 0', color: '#10b981', fontWeight: '700' }}>2</h2>
-              <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '14px', fontWeight: '500' }}>In Progress</p>
-            </div>
-            <div className="dash-card" style={{ padding: '24px', borderRadius: '16px', border: '1px solid rgba(245, 158, 11, 0.2)', background: 'linear-gradient(145deg, rgba(245, 158, 11, 0.05) 0%, transparent 100%)' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-                <ReportIcon style={{ width: '20px', height: '20px' }} />
-              </div>
-              <h2 style={{ fontSize: '36px', margin: '0 0 8px 0', color: '#f59e0b', fontWeight: '700' }}>3</h2>
-              <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '14px', fontWeight: '500' }}>Pending Rx</p>
-            </div>
-            <div className="dash-card" style={{ padding: '24px', borderRadius: '16px', border: '1px solid rgba(168, 85, 247, 0.2)', background: 'linear-gradient(145deg, rgba(168, 85, 247, 0.05) 0%, transparent 100%)' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(168, 85, 247, 0.1)', color: '#a855f7', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-                <div style={{ width: '16px', height: '20px', border: '2px solid currentColor', borderBottomLeftRadius: '10px', borderBottomRightRadius: '10px', borderTopLeftRadius: '3px', borderTopRightRadius: '3px' }}></div>
-              </div>
-              <h2 style={{ fontSize: '36px', margin: '0 0 8px 0', color: '#a855f7', fontWeight: '700' }}>2</h2>
-              <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '14px', fontWeight: '500' }}>Lab Pending</p>
-            </div>
-          </div>
-
-          {/* Recent Consultations */}
+          {/* Left Column: Today's Consultations */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-              <h2 style={{ fontSize: '22px', color: '#fff', margin: 0, fontWeight: 'bold' }}>Recent Consultations</h2>
-              <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Wednesday, 12 July 2026</div>
+              <h2 style={{ fontSize: '22px', color: '#fff', margin: 0, fontWeight: 'bold' }}>Today's Consultations</h2>
+              <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>{formattedUTC}</div>
             </div>
             
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '24px', alignItems: 'center' }}>
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                <button style={{ padding: '8px 20px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>All</button>
-                <button style={{ padding: '8px 20px', background: 'var(--card-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)', borderRadius: '8px', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }}>Active Case</button>
-                <button style={{ padding: '8px 20px', background: 'var(--card-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)', borderRadius: '8px', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }}>Pending Referral</button>
-                <button style={{ padding: '8px 20px', background: 'var(--card-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)', borderRadius: '8px', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }}>Follow-up Required</button>
+                <button onClick={() => setClinicianFilter('All')} style={{ padding: '8px 20px', background: clinicianFilter === 'All' ? '#10b981' : 'var(--card-bg)', color: clinicianFilter === 'All' ? '#fff' : 'var(--text-muted)', border: clinicianFilter === 'All' ? 'none' : '1px solid var(--card-border)', borderRadius: '8px', fontSize: '14px', fontWeight: clinicianFilter === 'All' ? '600' : '500', cursor: 'pointer' }}>All</button>
+                <button onClick={() => setClinicianFilter('Lab process')} style={{ padding: '8px 20px', background: clinicianFilter === 'Lab process' ? '#10b981' : 'var(--card-bg)', color: clinicianFilter === 'Lab process' ? '#fff' : 'var(--text-muted)', border: clinicianFilter === 'Lab process' ? 'none' : '1px solid var(--card-border)', borderRadius: '8px', fontSize: '14px', fontWeight: clinicianFilter === 'Lab process' ? '600' : '500', cursor: 'pointer' }}>Lab process</button>
+                <button onClick={() => setClinicianFilter('Pending referrals')} style={{ padding: '8px 20px', background: clinicianFilter === 'Pending referrals' ? '#10b981' : 'var(--card-bg)', color: clinicianFilter === 'Pending referrals' ? '#fff' : 'var(--text-muted)', border: clinicianFilter === 'Pending referrals' ? 'none' : '1px solid var(--card-border)', borderRadius: '8px', fontSize: '14px', fontWeight: clinicianFilter === 'Pending referrals' ? '600' : '500', cursor: 'pointer' }}>Pending referrals</button>
               </div>
               
               <div style={{ display: 'flex', gap: '12px', marginLeft: 'auto' }}>
@@ -388,22 +347,15 @@ const Dashboard = () => {
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
                 </button>
                 <div style={{ display: 'flex', alignItems: 'center', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '8px', padding: '0 16px', width: '300px' }}>
-                  <input type="text" placeholder="Search a name, complaint, diagnosis..." style={{ border: 'none', background: 'transparent', color: '#fff', fontSize: '14px', width: '100%', outline: 'none', padding: '10px 0' }} />
+                  <input type="text" value={clinicianSearch} onChange={(e) => setClinicianSearch(e.target.value)} placeholder="Search a name, complaint, diagnosis..." style={{ border: 'none', background: 'transparent', color: '#fff', fontSize: '14px', width: '100%', outline: 'none', padding: '10px 0' }} />
                   <SearchIcon style={{ color: 'var(--text-muted)', width: '18px', height: '18px', marginLeft: '8px' }} />
                 </div>
               </div>
             </div>
 
             {/* Grid of Patient Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
-              {[
-                { initials: 'BH', color: '#10b981', name: 'Bereket Haile', id: 'UOG/14321/17', loc: 'Student Clinic', status: 'Active Case', sColor: '#10b981', age: '21 M', visit: 'Today, 09:45 AM', cc: 'Persistent cough, low-grade fever', dx: 'Upper respiratory tract infection' },
-                { initials: 'LT', color: '#8b5cf6', name: 'Liya Tadesse', id: 'UOG/06543/16', loc: 'OPD Room 2', status: 'Pending Referral', sColor: '#f59e0b', age: '22 F', visit: 'Today, 10:15 AM', cc: 'Recurrent wheezing, chest tightness', dx: 'Asthma exacerbation' },
-                { initials: 'YB', color: '#f59e0b', name: 'Yohannes Bekele', id: 'UOG/07122/16', loc: 'Internal Medicine', status: 'Follow-up Required', sColor: '#8b5cf6', age: '23 M', visit: 'Today, 10:00 AM', cc: 'Increased thirst, frequent urination', dx: 'Type 2 Diabetes' },
-                { initials: 'AG', color: '#ef4444', name: 'Abel Getachew', id: 'UOG/10234/15', loc: 'Student Clinic', status: 'Active Case', sColor: '#10b981', age: '24 M', visit: 'Today, 08:30 AM', cc: 'Chronic headache, blurry vision', dx: 'Migraine' },
-                { initials: 'SM', color: '#3b82f6', name: 'Sara Mengistu', id: 'UOG/18334/18', loc: 'Emergency', status: 'Discharged', sColor: '#10b981', age: '20 F', visit: 'Today, 07:50 AM', cc: 'Abdominal pain, nausea', dx: 'Acute gastroenteritis' },
-                { initials: 'DF', color: '#1b64f2', name: 'Daniel Fikru', id: 'UOG/22456/17', loc: 'Orthopedics', status: 'Pending Referral', sColor: '#f59e0b', age: '22 M', visit: 'Today, 11:20 AM', cc: 'Ankle sprain after sports', dx: 'Grade II ankle sprain' },
-              ].map((pt, i) => (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
+              {filteredClinicianPatients.map((pt, i) => (
                 <div key={i} className="dash-card" style={{ padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
                     <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: pt.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 'bold' }}>
@@ -412,10 +364,6 @@ const Dashboard = () => {
                     <div>
                       <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', color: '#fff', fontWeight: '600' }}>{pt.name}</h4>
                       <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>{pt.id}</div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                        {pt.loc}
-                      </div>
                     </div>
                   </div>
                   
@@ -426,8 +374,11 @@ const Dashboard = () => {
 
                   <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '16px', marginBottom: '16px' }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Age</div>
-                      <div style={{ fontSize: '14px', color: '#f1f5f9', fontWeight: '500' }}>{pt.age}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Referral Status</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: pt.refStatus === 'Accepted' ? '#10b981' : '#f59e0b', fontWeight: '500' }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: pt.refStatus === 'Accepted' ? '#10b981' : '#f59e0b' }}></div>
+                        {pt.refStatus}
+                      </div>
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Last Visit</div>
@@ -445,12 +396,44 @@ const Dashboard = () => {
                     <div style={{ display: 'inline-block', padding: '6px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: '20px', fontSize: '13px', color: '#cbd5e1' }}>{pt.dx}</div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '12px', marginTop: 'auto' }}>
-                    <button style={{ flex: 1, padding: '10px', background: 'var(--primary-blue)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'background 0.2s' }} className="hover-bg-light">View Chart</button>
-                    <button style={{ flex: 1, padding: '10px', background: 'transparent', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.5)', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'background 0.2s' }} className="hover-bg-success">Discharge</button>
+                  <div style={{ display: 'flex', marginTop: 'auto' }}>
+                    <Link to="/referrals" style={{ flex: 1, padding: '10px', background: 'var(--primary-blue)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'background 0.2s', textDecoration: 'none', textAlign: 'center', display: 'inline-block' }} className="hover-bg-light">View Chart</Link>
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Right Column: Quick Actions vertically */}
+          <div className="dash-card" style={{ padding: '24px', borderRadius: '16px', position: 'sticky', top: '24px' }}>
+            <h3 style={{ margin: '0 0 24px 0', fontSize: '18px', color: '#fff', fontWeight: '700' }}>Quick Actions</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Button 1: New Visit */}
+              <Link to="/referrals/new" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '12px', textDecoration: 'none', transition: 'all 0.2s' }} className="hover-card">
+                <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>+</div>
+                <span style={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}>New Visit</span>
+              </Link>
+              {/* Button 2: Register a student */}
+              <Link to="/students/new" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '12px', textDecoration: 'none', transition: 'all 0.2s' }} className="hover-card">
+                <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <UsersIcon style={{ width: '20px', height: '20px' }} />
+                </div>
+                <span style={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}>Register a student</span>
+              </Link>
+              {/* Button 3: Students */}
+              <Link to="/students" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '12px', textDecoration: 'none', transition: 'all 0.2s' }} className="hover-card">
+                <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(168, 85, 247, 0.1)', color: '#a855f7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <SearchIcon style={{ width: '20px', height: '20px' }} />
+                </div>
+                <span style={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}>Students</span>
+              </Link>
+              {/* Button 4: Refer Out */}
+              <Link to="/referrals/new" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '12px', textDecoration: 'none', transition: 'all 0.2s' }} className="hover-card">
+                <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                </div>
+                <span style={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}>Refer Out</span>
+              </Link>
             </div>
           </div>
         </div>
