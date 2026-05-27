@@ -7,6 +7,7 @@ from config.permissions import (
     IsAdminRole,
     IsLabTechnicianRole,
     IsPharmacistRole,
+    IsAdminOrClinician,
 )
 
 from .models import ClinicalVisit, LabRequest, Prescription
@@ -36,7 +37,8 @@ class ClinicalVisitViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action == 'create':
-            return [IsAuthenticated(), IsClinicianRole()]
+            # Both admins and clinicians can create clinical visits
+            return [IsAuthenticated(), IsAdminOrClinician()]
 
         if self.action in ['update', 'partial_update', 'destroy']:
             return [IsAuthenticated(), IsAdminRole()]
@@ -59,25 +61,27 @@ class LabRequestViewSet(viewsets.ModelViewSet):
         qs = super().get_queryset()
         visit_id = self.request.query_params.get('visit')
         student_id = self.request.query_params.get('student')
-
+        # Lab Technicians should only see pending requests
+        if self.request.user.role == 'lab_technician':
+            qs = qs.filter(status='pending')
         if visit_id:
             qs = qs.filter(clinical_visit_id=visit_id)
-
         if student_id:
             qs = qs.filter(clinical_visit__student__university_id=student_id)
-
         return qs
 
     def get_permissions(self):
+        if self.action == 'list':
+            return [IsAuthenticated(), IsLabTechnicianRole()]
+        if self.action == 'retrieve':
+            return [IsAuthenticated(), IsLabTechnicianRole()]
         if self.action == 'create':
-            return [IsAuthenticated(), IsClinicianRole()]
-
+            # Both admins and clinicians can create lab requests
+            return [IsAuthenticated(), IsAdminOrClinician()]
         if self.action in ['update', 'partial_update']:
             return [IsAuthenticated(), IsLabTechnicianRole()]
-
         if self.action == 'destroy':
             return [IsAuthenticated(), IsAdminRole()]
-
         return [IsAuthenticated()]
 
     def perform_create(self, serializer):
@@ -102,33 +106,34 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
         qs = super().get_queryset()
         visit_id = self.request.query_params.get('visit')
         student_id = self.request.query_params.get('student')
-
+        # Pharmacists should only see pending prescriptions
+        if self.request.user.role == 'pharmacist':
+            qs = qs.filter(status='pending')
         if visit_id:
             qs = qs.filter(clinical_visit_id=visit_id)
-
         if student_id:
             qs = qs.filter(clinical_visit__student__university_id=student_id)
-
         return qs
 
     def get_permissions(self):
+        if self.action == 'list':
+            return [IsAuthenticated(), IsPharmacistRole()]
+        if self.action == 'retrieve':
+            return [IsAuthenticated(), IsPharmacistRole()]
         if self.action == 'create':
-            return [IsAuthenticated(), IsClinicianRole()]
-
+            # Both admins and clinicians can create prescriptions
+            return [IsAuthenticated(), IsAdminOrClinician()]
         if self.action in ['update', 'partial_update']:
             return [IsAuthenticated(), IsPharmacistRole()]
-
         if self.action == 'destroy':
             return [IsAuthenticated(), IsAdminRole()]
-
         return [IsAuthenticated()]
 
     def perform_create(self, serializer):
         serializer.save(prescribed_by=self.request.user)
 
-        def perform_update(self, serializer):
-            instance = serializer.save()
-
+    def perform_update(self, serializer):
+        instance = serializer.save()
         if instance.status == 'dispensed' and instance.dispensed_at is None:
             instance.dispensed_at = timezone.now()
             instance.save(update_fields=['dispensed_at'])

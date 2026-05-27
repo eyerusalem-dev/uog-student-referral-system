@@ -31,7 +31,7 @@ const Login = () => {
     if (result.success) {
       navigate("/");
     } else {
-      setError(result.message || "Login failed. Please try again.");
+      setError("Wrong username or password");
     }
 
     setSubmitting(false);

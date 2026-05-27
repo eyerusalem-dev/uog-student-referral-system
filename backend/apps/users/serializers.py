@@ -54,16 +54,21 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
+        # Debug: Log the data being used to create the user
+        print(f"[DEBUG] Creating user with data: {validated_data}")
         user = User(**validated_data)
 
         if password:
             user.set_password(password)
 
         user.save()
+        print(f"[DEBUG] User created successfully: {user.username}, role={user.role}, id={user.id}")
         return user
 
     def update(self, instance, validated_data):
         password = validated_data.pop('password', None)
+        # Debug: Log the updates being applied
+        print(f"[DEBUG] Updating user {instance.username} (id={instance.id}) with data: {validated_data}")
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -72,4 +77,5 @@ class UserSerializer(serializers.ModelSerializer):
             instance.set_password(password)
 
         instance.save()
+        print(f"[DEBUG] User updated successfully: {instance.username}, role={instance.role}")
         return instance

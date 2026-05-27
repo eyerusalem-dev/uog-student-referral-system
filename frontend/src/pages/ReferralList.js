@@ -47,7 +47,9 @@ const ReferralList = () => {
   const [referrals, setReferrals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
-  const [selectedRefs, setSelectedRefs] = useState([3]); // pre-select an ID for demo
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedReferral, setSelectedReferral] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     fetchReferrals();
@@ -78,11 +80,15 @@ const ReferralList = () => {
     }
   };
 
-  const toggleSelect = (id) => {
-    setSelectedRefs(prev => 
-      prev.includes(id) ? prev.filter(refId => refId !== id) : [...prev, id]
-    );
+  // Calculate real stats from referrals data
+  const stats = {
+    accepted: referrals.filter(r => r.status === 'accepted').length,
+    pending: referrals.filter(r => r.status === 'pending').length,
+    total: referrals.length,
+    declined: referrals.filter(r => r.status === 'declined').length
   };
+
+
 
   const badgeStyle = (status) => {
     const s = status.toLowerCase();
@@ -95,14 +101,13 @@ const ReferralList = () => {
     return { border: '1px solid #6b7280', color: '#9ca3af', background: 'rgba(107, 114, 128, 0.1)' };
   };
 
-  // Demo fallback if no real data
-  const displayReferrals = referrals.length > 0 ? referrals : [
-    { referral_id: 1, student_name: 'Caren G. Simpson', receiving_department_name: 'Dr. Petra Winsburry', reason: 'Routine Check-Up', status: 'Confirmed', created_at: '2026-07-20T09:00:00Z' },
-    { referral_id: 2, student_name: 'Edgar Warrow', receiving_department_name: 'Dr. Olivia Martinez', reason: 'Cardiac Consultation', status: 'Confirmed', created_at: '2026-07-20T10:30:00Z' },
-    { referral_id: 3, student_name: 'Ocean Jane Lupre', receiving_department_name: 'Dr. Damian Sanchez', reason: 'Pediatric Check-Up', status: 'Pending', created_at: '2026-07-20T11:00:00Z' },
-    { referral_id: 4, student_name: 'Shane Riddick', receiving_department_name: 'Dr. Chloe Harrington', reason: 'Skin Allergy', status: 'Cancelled', created_at: '2026-07-20T13:00:00Z' },
-    { referral_id: 5, student_name: 'Queen Lawnston', receiving_department_name: 'Dr. Petra Winsburry', reason: 'Follow-Up Visit', status: 'Pending', created_at: '2026-07-20T14:30:00Z' },
-  ];
+  const displayReferrals = (referrals.length > 0 ? referrals : []).filter(ref => {
+    const term = searchTerm.toLowerCase();
+    const name = (ref.student_name || '').toLowerCase();
+    const dept = (ref.receiving_department_name || '').toLowerCase();
+    const reason = (ref.reason || '').toLowerCase();
+    return name.includes(term) || dept.includes(term) || reason.includes(term);
+  }).sort((a, b) => (a.student_name || '').localeCompare(b.student_name || ''));
 
   return (
     <Layout>
@@ -118,20 +123,19 @@ const ReferralList = () => {
             <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <CheckCircleIcon />
             </div>
-            <h3 style={{ margin: 0, color: '#fff', fontSize: '16px', fontWeight: '600' }}>Confirmed<br/>Referrals</h3>
+            <h3 style={{ margin: 0, color: '#fff', fontSize: '16px', fontWeight: '600' }}>Accepted<br/>Referrals</h3>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '16px' }}>
-            <span style={{ fontSize: '48px', fontWeight: 'bold', color: '#fff', lineHeight: 1 }}>6</span>
-            <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '14px' }}>+15.2%</span>
+            <span style={{ fontSize: '48px', fontWeight: 'bold', color: '#fff', lineHeight: 1 }}>{stats.accepted}</span>
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '13px', lineHeight: '1.5', margin: '0 0 24px 0', flex: 1 }}>
-            Confirmed in the last 7 days<br/>from 5.567 Visitor to 7.526<br/>Visitor.
+            Referrals that have been accepted by the receiving department
           </p>
           <div>
             <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden', marginBottom: '8px' }}>
-              <div style={{ width: '65%', height: '100%', background: '#10b981' }}></div>
+              <div style={{ width: `${stats.total > 0 ? (stats.accepted / stats.total) * 100 : 0}%`, height: '100%', background: '#10b981' }}></div>
             </div>
-            <div style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: '12px' }}>1,345 today</div>
+            <div style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: '12px' }}>{stats.total > 0 ? Math.round((stats.accepted / stats.total) * 100) : 0}% of total</div>
           </div>
         </div>
 
@@ -144,23 +148,16 @@ const ReferralList = () => {
             <h3 style={{ margin: 0, color: '#fff', fontSize: '16px', fontWeight: '600' }}>Pending<br/>Referrals</h3>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '16px' }}>
-            <span style={{ fontSize: '48px', fontWeight: 'bold', color: '#fff', lineHeight: 1 }}>2</span>
-            <span style={{ color: '#f59e0b', fontWeight: 'bold', fontSize: '14px' }}>+10.4%</span>
+            <span style={{ fontSize: '48px', fontWeight: 'bold', color: '#fff', lineHeight: 1 }}>{stats.pending}</span>
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '13px', lineHeight: '1.5', margin: '0 0 16px 0' }}>
-            Increase in data by 500<br/>inpatients in the last 7 days.
+            Referrals waiting for intake team response
           </p>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '24px', marginBottom: '16px' }}>
-            {/* Fake mini bar chart */}
-            {[40, 70, 40, 30, 80, 50, 40, 80, 60, 40].map((h, i) => (
-              <div key={i} style={{ flex: 1, background: '#f59e0b', height: `${h}%`, borderRadius: '2px' }}></div>
-            ))}
-          </div>
           <div style={{ marginTop: 'auto' }}>
             <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden', marginBottom: '8px' }}>
-              <div style={{ width: '45%', height: '100%', background: '#f59e0b' }}></div>
+              <div style={{ width: `${stats.total > 0 ? (stats.pending / stats.total) * 100 : 0}%`, height: '100%', background: '#f59e0b' }}></div>
             </div>
-            <div style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: '12px' }}>1,345 today</div>
+            <div style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: '12px' }}>{stats.total > 0 ? Math.round((stats.pending / stats.total) * 100) : 0}% of total</div>
           </div>
         </div>
 
@@ -173,17 +170,16 @@ const ReferralList = () => {
             <h3 style={{ margin: 0, color: '#fff', fontSize: '16px', fontWeight: '600' }}>Total Referrals</h3>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '16px' }}>
-            <span style={{ fontSize: '48px', fontWeight: 'bold', color: '#fff', lineHeight: 1 }}>10</span>
-            <span style={{ color: '#3b82f6', fontWeight: 'bold', fontSize: '14px' }}>+165</span>
+            <span style={{ fontSize: '48px', fontWeight: 'bold', color: '#fff', lineHeight: 1 }}>{stats.total}</span>
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '13px', lineHeight: '1.5', margin: '0 0 24px 0', flex: 1 }}>
-            Visitor data obtained for the<br/>last 7 days from 10.2% to<br/>15.7%.
+            All referrals across all departments
           </p>
           <div>
             <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden', marginBottom: '8px' }}>
-              <div style={{ width: '85%', height: '100%', background: '#3b82f6' }}></div>
+              <div style={{ width: '100%', height: '100%', background: '#3b82f6' }}></div>
             </div>
-            <div style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: '12px' }}>1,345 today</div>
+            <div style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: '12px' }}>100% of referrals</div>
           </div>
         </div>
       </div>
@@ -244,18 +240,21 @@ const ReferralList = () => {
                   <div style={{ color: colors.text, fontSize: '14px', lineHeight: '1.4' }}>{doc.summary}</div>
                 </div>
 
-                <button style={{ 
-                  width: '100%', 
-                  padding: '12px', 
-                  borderRadius: '8px', 
-                  border: doc.action === 'Analyze' ? '1px solid rgba(255,255,255,0.1)' : `1px solid ${colors.border}`,
-                  background: doc.action === 'Analyze' ? 'rgba(255,255,255,0.02)' : colors.bg,
-                  color: doc.action === 'Analyze' ? '#fff' : colors.text,
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  cursor: 'pointer'
-                }}>
-                  {doc.action}
+                <button 
+                  onClick={() => { setSelectedReferral(ref); setShowModal(true); }}
+                  style={{ 
+                    width: '100%', 
+                    padding: '12px', 
+                    borderRadius: '8px', 
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'rgba(255,255,255,0.02)',
+                    color: '#fff',
+                    fontWeight: '600',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  View Details
                 </button>
               </div>
             );
@@ -283,11 +282,8 @@ const ReferralList = () => {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', padding: '10px 16px', borderRadius: '8px', color: 'var(--text-muted)', fontSize: '14px', width: '250px' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input type="text" placeholder="Search name, doctor, tre..." style={{ background: 'transparent', border: 'none', color: '#fff', width: '100%', outline: 'none' }} />
+              <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search name, department, reason..." style={{ background: 'transparent', border: 'none', color: '#fff', width: '100%', outline: 'none' }} />
             </div>
-            <Link to="/referrals/new" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#06b6d4', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '600', fontSize: '14px', cursor: 'pointer', textDecoration: 'none' }}>
-              + New Referral
-            </Link>
           </div>
         </div>
 
@@ -296,12 +292,9 @@ const ReferralList = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <th style={{ padding: '20px 24px', width: '50px' }}>
-                  <input type="checkbox" style={{ accentColor: '#3b82f6', width: '16px', height: '16px' }} />
-                </th>
-                {['NAME', 'DATE', 'TIME', 'DOCTOR', 'TREATMENT', 'STATUS', 'ACTION'].map((col, idx) => (
+                {['NAME', 'DATE', 'TIME', 'DEPARTMENT', 'REASON', 'STATUS'].map((col, idx) => (
                   <th key={idx} style={{ padding: '20px 16px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '600', letterSpacing: '0.5px' }}>
-                    {col} {col !== 'ACTION' && <span style={{ fontSize: '10px', marginLeft: '4px', verticalAlign: 'middle' }}>⌄</span>}
+                    {col}
                   </th>
                 ))}
               </tr>
@@ -309,22 +302,12 @@ const ReferralList = () => {
             <tbody>
               {displayReferrals.map((ref) => {
                 const { date, time } = formatDisplayDate(ref.created_at);
-                const isSelected = selectedRefs.includes(ref.referral_id);
-
                 return (
                   <tr key={ref.referral_id} style={{ 
                     borderBottom: '1px solid rgba(255,255,255,0.05)', 
-                    background: isSelected ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                    background: 'transparent',
                     transition: 'background 0.2s'
                   }}>
-                    <td style={{ padding: '20px 24px' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={isSelected}
-                        onChange={() => toggleSelect(ref.referral_id)}
-                        style={{ accentColor: '#3b82f6', width: '16px', height: '16px', cursor: 'pointer' }} 
-                      />
-                    </td>
                     <td style={{ padding: '20px 16px', color: '#fff', fontWeight: '600', fontSize: '14px' }}>
                       <div style={{ width: 'max-content' }}>{ref.student_name}</div>
                     </td>
@@ -351,17 +334,6 @@ const ReferralList = () => {
                         {ref.status}
                       </span>
                     </td>
-                    <td style={{ padding: '20px 16px' }}>
-                      {user?.role === 'intake_team' && ref.status.toLowerCase() === 'pending' ? (
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button onClick={() => handleStatusChange(ref.referral_id, 'accepted')} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Accept</button>
-                        </div>
-                      ) : (
-                        <button style={{ color: '#0ea5e9', background: 'transparent', border: 'none', fontWeight: '600', fontSize: '14px', cursor: 'pointer', padding: 0 }}>
-                          Reschedule
-                        </button>
-                      )}
-                    </td>
                   </tr>
                 );
               })}
@@ -369,6 +341,131 @@ const ReferralList = () => {
           </table>
         </div>
       </div>
+
+    {/* Detail Modal - Same structure as intake team modal in Dashboard */}
+    {showModal && selectedReferral && (
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px' }}>
+        <div style={{ background: '#1e293b', width: '100%', maxWidth: '700px', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
+          {/* Modal Header */}
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ margin: 0, color: '#fff', fontSize: '18px' }}>Referral Details</h3>
+            <button onClick={() => setShowModal(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+
+          {/* Urgency Banner */}
+          {selectedReferral.urgency === 'Critical' && (
+            <div style={{ padding: '12px 20px', background: '#fef2f2', color: '#dc2626', fontWeight: '700', textAlign: 'center', fontSize: '14px' }}>
+              ⚠️ CRITICAL - Immediate Attention Required
+            </div>
+          )}
+          {selectedReferral.urgency === 'Urgent' && (
+            <div style={{ padding: '12px 20px', background: '#fffbeb', color: '#d97706', fontWeight: '700', textAlign: 'center', fontSize: '14px' }}>
+              ⚡ URGENT - Priority Review Needed
+            </div>
+          )}
+
+          {/* Content */}
+          <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+            {/* Tracking ID */}
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>Tracking ID</div>
+              <div style={{ fontSize: '24px', fontWeight: '800', color: '#fff', fontFamily: 'monospace' }}>{selectedReferral.referral_id}</div>
+              <div style={{ marginTop: '8px' }}>
+                <span style={{
+                  padding: '4px 12px',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  background: selectedReferral.status === 'accepted' ? 'rgba(16, 185, 129, 0.15)' : selectedReferral.status === 'declined' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                  color: selectedReferral.status === 'accepted' ? '#10b981' : selectedReferral.status === 'declined' ? '#ef4444' : '#f59e0b'
+                }}>
+                  {selectedReferral.status?.toUpperCase() || 'PENDING'}
+                </span>
+              </div>
+            </div>
+
+            {/* Info Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '10px' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>Patient</div>
+                <div style={{ fontSize: '15px', fontWeight: '600', color: '#fff' }}>{selectedReferral.student_name}</div>
+                <div style={{ fontSize: '13px', color: '#64748b' }}>ID: {selectedReferral.student_university_id}</div>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '10px' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>Department</div>
+                <div style={{ fontSize: '15px', fontWeight: '600', color: '#fff' }}>{selectedReferral.receiving_department_name}</div>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '10px' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>Referred By</div>
+                <div style={{ fontSize: '14px', color: '#fff' }}>{selectedReferral.referred_by_username || 'Clinician'}</div>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '10px' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>Date</div>
+                <div style={{ fontSize: '14px', color: '#fff' }}>{new Date(selectedReferral.created_at).toLocaleDateString()}</div>
+              </div>
+            </div>
+
+            {/* Reason */}
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>Reason for Referral</div>
+              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '8px', color: '#e2e8f0', lineHeight: '1.5' }}>
+                {selectedReferral.reason || 'No reason provided'}
+              </div>
+            </div>
+
+            {/* Clinical Note */}
+            {selectedReferral.clinical_visit_details && (
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>📋 Attached Clinical Note</div>
+                <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', padding: '16px', borderRadius: '8px' }}>
+                  {selectedReferral.clinical_visit_details.symptoms && (
+                    <div style={{ marginBottom: '8px' }}>
+                      <span style={{ fontSize: '11px', color: '#3b82f6', textTransform: 'uppercase' }}>Symptoms:</span>
+                      <span style={{ color: '#e2e8f0', marginLeft: '8px' }}>{selectedReferral.clinical_visit_details.symptoms}</span>
+                    </div>
+                  )}
+                  {selectedReferral.clinical_visit_details.diagnosis && (
+                    <div style={{ marginBottom: '8px' }}>
+                      <span style={{ fontSize: '11px', color: '#3b82f6', textTransform: 'uppercase' }}>Diagnosis:</span>
+                      <span style={{ color: '#e2e8f0', marginLeft: '8px' }}>{selectedReferral.clinical_visit_details.diagnosis}</span>
+                    </div>
+                  )}
+                  {selectedReferral.clinical_visit_details.treatment && (
+                    <div>
+                      <span style={{ fontSize: '11px', color: '#3b82f6', textTransform: 'uppercase' }}>Treatment:</span>
+                      <span style={{ color: '#e2e8f0', marginLeft: '8px' }}>{selectedReferral.clinical_visit_details.treatment}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Response */}
+            {selectedReferral.response_note && (
+              <div>
+                <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>Response</div>
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '8px', color: '#e2e8f0' }}>
+                  {selectedReferral.response_note}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{ padding: '16px 24px', background: '#0f172a', display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <button onClick={() => setShowModal(false)} style={{ padding: '8px 16px', background: 'transparent', color: '#94a3b8', border: '1px solid #475569', borderRadius: '6px', cursor: 'pointer' }}>Close</button>
+            {user?.role === 'intake_team' && selectedReferral.status === 'pending' && (
+              <>
+                <button onClick={() => { handleStatusChange(selectedReferral.referral_id, 'declined'); setShowModal(false); }} style={{ padding: '8px 16px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Decline</button>
+                <button onClick={() => { handleStatusChange(selectedReferral.referral_id, 'accepted'); setShowModal(false); }} style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Accept</button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
     </Layout>
   );
 };

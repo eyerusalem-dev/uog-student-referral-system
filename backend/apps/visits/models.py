@@ -1,4 +1,5 @@
 from django.db import models
+import uuid
 from apps.users.models import User
 from apps.students.models import Student 
 
@@ -22,6 +23,12 @@ class ClinicalVisit(models.Model):
     
     # Locking mechanism
     is_locked = models.BooleanField(default=True)
+    visit_id = models.CharField(max_length=30, editable=False, null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.visit_id:
+            self.visit_id = "CN-" + str(uuid.uuid4()).upper()[:8]
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Visit - {self.student.university_id} on {self.visit_date.date()}"

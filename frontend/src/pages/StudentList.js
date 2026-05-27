@@ -11,6 +11,8 @@ const StudentList = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deptFilter, setDeptFilter] = useState('All Department');
+  const [yearFilter, setYearFilter] = useState('All Year');
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -29,24 +31,23 @@ const StudentList = () => {
   const displayStudents = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
 
-    const filtered = students.filter((student) => {
-      const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
-      return (
-        student.university_id.toLowerCase().includes(term) ||
-        fullName.includes(term)
-      );
+    let filtered = students.filter((student) => {
+      const fullName = `${student.first_name || ''} ${student.last_name || ''}`.toLowerCase();
+      const matchesSearch = (student.university_id || '').toLowerCase().includes(term) || fullName.includes(term);
+      const matchesDept = deptFilter === 'All Department' || student.department === deptFilter;
+      const matchesYear = yearFilter === 'All Year' || String(student.year_of_study) === yearFilter;
+      
+      return matchesSearch && matchesDept && matchesYear;
     });
 
-    if (filtered.length > 0) return filtered;
+    filtered.sort((a, b) => {
+      const nameA = `${a.first_name || ''} ${a.last_name || ''}`.toLowerCase();
+      const nameB = `${b.first_name || ''} ${b.last_name || ''}`.toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
 
-    // Fallback to demo data to match the screenshot if backend is empty
-    return [
-      { id: 1, university_id: 'UOG-2022-047', first_name: 'Nahom', last_name: 'Yonas', year_of_study: 1, check_in: '20 July 2026', department: 'IT', doctor: 'Dr. Petra Winsburry', room: '-', status: 'Active', color: '#3b82f6' },
-      { id: 2, university_id: 'STU-302', first_name: 'Edgar', last_name: 'Warrow', year_of_study: 3, check_in: '20/07/26', department: 'Software Engineering', doctor: 'Dr. Olivia Martinez', room: '-', status: 'Active', color: '#0ea5e9' },
-      { id: 3, university_id: 'STU-303', first_name: 'Ocean Jane', last_name: 'Lupre', year_of_study: 2, check_in: '20/07/26', department: 'Information Systems', doctor: 'Dr. Damian Sanchez', room: 'Double - 303', status: 'New Patient', color: '#3b82f6' },
-      { id: 4, university_id: 'STU-304', first_name: 'Shane', last_name: 'Riddick', year_of_study: 4, check_in: '20/07/26', department: 'Computer Science', doctor: 'Dr. Chloe Harrington', room: '-', status: 'Active', color: '#6366f1' },
-    ];
-  }, [students, searchTerm]);
+    return filtered;
+  }, [students, searchTerm, deptFilter, yearFilter]);
 
   return (
     <Layout>
@@ -76,15 +77,30 @@ const StudentList = () => {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px' }}><polyline points="6 9 12 15 18 9"></polyline></svg>
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', padding: '12px 16px', borderRadius: '8px', color: '#fff', fontSize: '14px', cursor: 'pointer' }}>
-            All Department
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '12px', color: 'var(--text-muted)' }}><polyline points="6 9 12 15 18 9"></polyline></svg>
-          </div>
+          <select 
+            value={deptFilter} 
+            onChange={(e) => setDeptFilter(e.target.value)}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', padding: '12px 16px', borderRadius: '8px', color: '#fff', fontSize: '14px', cursor: 'pointer', outline: 'none' }}
+          >
+            <option value="All Department" style={{ color: '#000' }}>All Department</option>
+            <option value="IT" style={{ color: '#000' }}>IT</option>
+            <option value="Software Engineering" style={{ color: '#000' }}>Software Engineering</option>
+            <option value="Information Systems" style={{ color: '#000' }}>Information Systems</option>
+            <option value="Computer Science" style={{ color: '#000' }}>Computer Science</option>
+          </select>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', padding: '12px 16px', borderRadius: '8px', color: '#fff', fontSize: '14px', cursor: 'pointer' }}>
-            All Year
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '12px', color: 'var(--text-muted)' }}><polyline points="6 9 12 15 18 9"></polyline></svg>
-          </div>
+          <select 
+            value={yearFilter} 
+            onChange={(e) => setYearFilter(e.target.value)}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', padding: '12px 16px', borderRadius: '8px', color: '#fff', fontSize: '14px', cursor: 'pointer', outline: 'none' }}
+          >
+            <option value="All Year" style={{ color: '#000' }}>All Year</option>
+            <option value="1" style={{ color: '#000' }}>Year 1</option>
+            <option value="2" style={{ color: '#000' }}>Year 2</option>
+            <option value="3" style={{ color: '#000' }}>Year 3</option>
+            <option value="4" style={{ color: '#000' }}>Year 4</option>
+            <option value="5" style={{ color: '#000' }}>Year 5</option>
+          </select>
         </div>
       </div>
 

@@ -137,18 +137,28 @@ const PrescriptionsPage = () => {
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
-                      {rx.status === 'pending' ? (
-                        <>
-                          <button onClick={() => handleUpdate(rx.id, 'dispensed')} disabled={actionLoading === rx.id} style={{ background: 'transparent', color: '#10b981', border: 'none', fontWeight: '600', fontSize: '14px', cursor: 'pointer', padding: 0 }}>
-                            {actionLoading === rx.id ? '...' : 'Dispense'}
-                          </button>
-                          <button onClick={() => handleUpdate(rx.id, 'out_of_stock')} disabled={actionLoading === rx.id} style={{ background: 'transparent', color: 'var(--text-muted)', border: 'none', fontWeight: '500', fontSize: '12px', cursor: 'pointer', padding: 0 }}>
-                            No Stock
-                          </button>
-                        </>
-                      ) : (
-                        <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Done</span>
-                      )}
+                                          {rx.status === 'pending' ? (
+                      <select
+                        value={rx.status}
+                        onChange={(e) => handleUpdate(rx.id, e.target.value)}
+                        disabled={actionLoading === rx.id}
+                        style={{
+                          background: 'transparent',
+                          border: '1px solid var(--text-muted)',
+                          borderRadius: '4px',
+                          padding: '4px 8px',
+                          color: '#fff',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <option value="pending" style={{ background: '#fef3c7', color: '#92400e' }}>Pending</option>
+                        <option value="dispensed" style={{ background: '#d1fae5', color: '#065f46' }}>Dispensed</option>
+                        <option value="out_of_stock" style={{ background: '#fee2e2', color: '#991b1b' }}>Out of Stock</option>
+                      </select>
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Done</span>
+                    )}
                     </div>
                   </div>
                 );

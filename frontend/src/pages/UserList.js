@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Layout from '../components/Layout';
-import { getUsers, getDepartments, createUser, updateUser } from '../services/api';
+import { getUsers, getDepartments, createUser, updateUser, deleteUser } from '../services/api';
 
 const emptyForm = {
   username: '', password: '', email: '', first_name: '', last_name: '', phone: '', role: 'clinician', department: '', is_active: true,
@@ -87,6 +87,10 @@ const UserList = () => {
   const startEdit = (user) => {
     setEditingUserId(user.id);
     setError('');
+    // Extract department ID if it's an object, otherwise use as-is
+    const departmentId = typeof user.department === 'object' && user.department !== null 
+      ? user.department.id 
+      : (user.department || '');
     setFormData({
       username: user.username || '',
       password: '',
@@ -95,7 +99,7 @@ const UserList = () => {
       last_name: user.last_name || '',
       phone: user.phone || '',
       role: user.role || 'clinician',
-      department: user.department || '',
+      department: departmentId,
       is_active: user.is_active,
     });
     setIsFormVisible(true);
@@ -123,18 +127,46 @@ const UserList = () => {
       if (!editingUserId && !payload.password.trim()) {
         setError('Password is required when creating a new user.'); setSaving(false); return;
       }
-      if (editingUserId && !payload.password.trim()) delete payload.password;
+      if (!payload.phone?.trim()) payload.phone = null;
+      if (!payload.email?.trim()) payload.email = "";
+      if (editingUserId && !payload.password?.trim()) delete payload.password;
+      
+      // Debug: Log the payload being sent
+      console.log('[DEBUG] Sending user data to API:', payload);
       
       if (editingUserId) await updateUser(editingUserId, payload);
       else await createUser(payload);
 
+      console.log('[DEBUG] User saved successfully!');
       resetForm();
       await loadData();
     } catch (err) {
       console.error(err);
-      setError('An error occurred while saving the user.');
+      const serverError = err.response?.data;
+      if (typeof serverError === 'object') {
+        const msgs = Object.values(serverError).flat().join(' ');
+        setError(msgs || 'An error occurred while saving the user.');
+      } else {
+        setError('An error occurred while saving the user.');
+      }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (window.confirm("Are you sure you want to delete this user?")) {
+      setSaving(true);
+      try {
+        await deleteUser(editingUserId);
+        resetForm();
+        await loadData();
+      } catch (err) {
+        console.error(err);
+        setError('Failed to delete user.');
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
@@ -143,13 +175,8 @@ const UserList = () => {
     return user.username ? user.username.charAt(0).toUpperCase() : 'U';
   };
 
-  // Demo Fallback Data for UI exact match
-  const displayUsers = filteredUsers.length > 0 ? filteredUsers : [
-    { id: 1, _displayId: 'ADM-001', first_name: 'Dr. Abebe', last_name: 'Kebede', username: 'abebe.k', role: 'admin', department_name: 'Administration', is_active: true, color: '#3b82f6' },
-    { id: 2, _displayId: 'DOC-002', first_name: 'Dr. Marta', last_name: 'Alemu', username: 'marta.a', role: 'clinician', department_name: 'General Medical', is_active: true, color: '#3b82f6' },
-    { id: 3, _displayId: 'NUR-003', first_name: 'Nurse Samuel', last_name: 'Tsegaye', username: 'samuel.t', role: 'intake_team', department_name: 'Emergency', is_active: true, color: '#6366f1' },
-    { id: 4, _displayId: 'PHA-005', first_name: 'Pharmacist', last_name: 'Yonas Bekele', username: 'yonas.b', role: 'pharmacist', department_name: 'Pharmacy', is_active: true, color: '#3b82f6' },
-  ];
+  // Use real data only
+  const displayUsers = filteredUsers;
 
   return (
     <Layout>
@@ -181,11 +208,15 @@ const UserList = () => {
             </div>
             <div>
               <label style={{ display: 'block', color: 'var(--text-muted)', marginBottom: '8px', fontSize: '14px' }}>First Name</label>
-              <input name="first_name" value={formData.first_name} onChange={handleChange} style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', borderRadius: '8px', color: '#fff' }} />
+              <input name="first_name" value={formData.first_name} onChange={handleChange} pattern="[A-Za-z\s]+" title="Only letters are allowed" style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', borderRadius: '8px', color: '#fff' }} />
             </div>
             <div>
               <label style={{ display: 'block', color: 'var(--text-muted)', marginBottom: '8px', fontSize: '14px' }}>Last Name</label>
-              <input name="last_name" value={formData.last_name} onChange={handleChange} style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', borderRadius: '8px', color: '#fff' }} />
+              <input name="last_name" value={formData.last_name} onChange={handleChange} pattern="[A-Za-z\s]+" title="Only letters are allowed" style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', borderRadius: '8px', color: '#fff' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', color: 'var(--text-muted)', marginBottom: '8px', fontSize: '14px' }}>Phone Number</label>
+              <input name="phone" value={formData.phone} onChange={handleChange} style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', borderRadius: '8px', color: '#fff' }} />
             </div>
             <div>
               <label style={{ display: 'block', color: 'var(--text-muted)', marginBottom: '8px', fontSize: '14px' }}>Role *</label>
@@ -212,9 +243,16 @@ const UserList = () => {
             </div>
           </div>
           
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-            <button type="button" onClick={() => setIsFormVisible(false)} style={{ background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button>
-            <button type="submit" disabled={saving} style={{ background: '#0ea5e9', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer' }}>{saving ? 'Saving...' : 'Save User'}</button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+            <div>
+              {editingUserId && (
+                <button type="button" onClick={handleDelete} disabled={saving} style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer' }}>Delete User</button>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button type="button" onClick={() => setIsFormVisible(false)} style={{ background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button>
+              <button type="submit" disabled={saving} style={{ background: '#0ea5e9', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer' }}>{saving ? 'Saving...' : 'Save User'}</button>
+            </div>
           </div>
         </form>
       )}
@@ -300,23 +338,7 @@ const UserList = () => {
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {[
-                { name: 'Dr. Abebe Kebede', action: 'Created new referral', time: '2 mins ago', color: '#f97316', initials: 'AK' },
-                { name: 'Dr. Marta Alemu', action: 'Updated patient record', time: '15 mins ago', color: '#f97316', initials: 'MA' },
-                { name: 'Nurse Samuel', action: 'Completed intake form', time: '1 hour ago', color: '#f97316', initials: 'ST' },
-                { name: 'Tech Hanna', action: 'Processed lab request', time: '3 hours ago', color: '#f97316', initials: 'HG' }
-              ].map((act, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px' }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: act.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '16px' }}>
-                    {act.initials}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: '#fff', fontWeight: '600', fontSize: '15px', marginBottom: '4px' }}>{act.name}</div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>{act.action}</div>
-                  </div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{act.time}</div>
-                </div>
-              ))}
+              <div style={{ color: 'var(--text-muted)' }}>No recent activity.</div>
             </div>
           </div>
         </div>
@@ -350,23 +372,7 @@ const UserList = () => {
               <span style={{ color: '#0ea5e9', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>See All</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              {[
-                { initials: 'AK', name: 'Dr. Abebe Kebede', role: 'Heart Specialist', status: 'Available', statusColor: '#10b981' },
-                { initials: 'MA', name: 'Dr. Marta Alemu', role: 'Psychology', status: 'Absent', statusColor: '#ef4444' },
-                { initials: 'ST', name: 'Dr. Samuel Tsegaye', role: 'Kid Doctor', status: 'Available', statusColor: '#10b981' },
-                { initials: 'HG', name: 'Dr. Hanna Getachew', role: 'Kidney', status: 'Available', statusColor: '#10b981' },
-              ].map((staff, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#3b82f6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '15px' }}>
-                    {staff.initials}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: '#fff', fontWeight: '600', fontSize: '15px' }}>{staff.name}</div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '2px' }}>{staff.role}</div>
-                  </div>
-                  <div style={{ color: staff.statusColor, fontSize: '13px', fontWeight: '600' }}>{staff.status}</div>
-                </div>
-              ))}
+              <div style={{ color: 'var(--text-muted)' }}>No staff list data available.</div>
             </div>
           </div>
 
@@ -378,27 +384,7 @@ const UserList = () => {
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ border: '1px solid rgba(245, 158, 11, 0.3)', background: 'rgba(245, 158, 11, 0.05)', borderRadius: '12px', padding: '16px', display: 'flex', gap: '16px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(245, 158, 11, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <AlertTriangle />
-                </div>
-                <div>
-                  <div style={{ color: '#fff', fontWeight: 'bold', fontSize: '15px', marginBottom: '4px' }}>Password expires soon</div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '8px' }}>3 users need to update passwords</div>
-                  <div style={{ color: '#f59e0b', fontSize: '12px', fontWeight: '600' }}>Few Hours Ago</div>
-                </div>
-              </div>
-              
-              <div style={{ border: '1px solid rgba(239, 68, 68, 0.3)', background: 'rgba(239, 68, 68, 0.05)', borderRadius: '12px', padding: '16px', display: 'flex', gap: '16px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <AlertCircle />
-                </div>
-                <div>
-                  <div style={{ color: '#fff', fontWeight: 'bold', fontSize: '15px', marginBottom: '4px' }}>Failed login attempts</div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '8px' }}>Multiple failed attempts detected</div>
-                  <div style={{ color: '#ef4444', fontSize: '12px', fontWeight: '600' }}>2 Hours Ago</div>
-                </div>
-              </div>
+              <div style={{ color: 'var(--text-muted)' }}>No system alerts.</div>
             </div>
           </div>
           

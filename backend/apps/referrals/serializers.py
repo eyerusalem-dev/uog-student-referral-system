@@ -25,7 +25,7 @@ class ReferralSerializer(serializers.ModelSerializer):
             'referral_id', 'student', 'student_university_id', 'student_name',
             'clinical_visit', 'clinical_visit_details', 'referred_by', 'referred_by_username',
             'receiving_department', 'receiving_department_name',
-            'reason', 'referral_note', 'status', 'response_note', 'responded_at', 'created_at',
+            'urgency', 'reason', 'referral_note', 'status', 'response_note', 'responded_at', 'created_at',
         ]
         read_only_fields = [
             'referral_id', 'referred_by', 'responded_at', 'created_at',

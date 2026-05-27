@@ -221,14 +221,10 @@ const DepartmentList = () => {
                     <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '15px' }}>
                       {s.initials}
                     </div>
-                    <div style={{ position: 'absolute', bottom: '0', right: '0', width: '12px', height: '12px', borderRadius: '50%', background: s.statusColor, border: '2px solid var(--card-bg)' }}></div>
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ color: '#fff', fontWeight: 'bold', fontSize: '15px', marginBottom: '4px' }}>{s.name}</div>
                     <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{s.role}</div>
-                  </div>
-                  <div style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', border: `1px solid ${s.statusColor}40`, color: s.statusColor }}>
-                    {s.status}
                   </div>
                 </div>
               ))}
@@ -237,19 +233,14 @@ const DepartmentList = () => {
             {/* Bottom Stats */}
             <div style={{ marginTop: '24px', padding: '24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ color: '#f59e0b', fontSize: '20px', fontWeight: 'bold', marginBottom: '4px' }}>{dept.pending}</div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: '600', letterSpacing: '0.5px' }}>PENDING</div>
-                </div>
-                <div style={{ width: '1px', background: 'rgba(255,255,255,0.05)' }}></div>
-                <div style={{ textAlign: 'center' }}>
+                <div style={{ textAlign: 'center', flex: 1 }}>
                   <div style={{ color: '#0ea5e9', fontSize: '20px', fontWeight: 'bold', marginBottom: '4px' }}>{dept.total}</div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: '600', letterSpacing: '0.5px' }}>TOTAL</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Referrals Sent</div>
                 </div>
                 <div style={{ width: '1px', background: 'rgba(255,255,255,0.05)' }}></div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '8px', paddingTop: '4px' }}>{dept.lastActive}</div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase' }}>LAST ACTIVE</div>
+                <div style={{ textAlign: 'center', flex: 1 }}>
+                  <div style={{ color: '#10b981', fontSize: '20px', fontWeight: 'bold', marginBottom: '4px' }}>{dept.staffCount}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Intake Team Staff</div>
                 </div>
               </div>
 

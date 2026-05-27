@@ -24,6 +24,14 @@ class Referral(models.Model):
     referred_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     receiving_department = models.ForeignKey(HospitalDepartment, on_delete=models.PROTECT)
 
+    URGENCY_CHOICES = [
+        ('Routine', 'Routine'),
+        ('Urgent', 'Urgent'),
+        ('Critical', 'Critical'),
+    ]
+    urgency = models.CharField(max_length=20, choices=URGENCY_CHOICES, default='Routine')
+
+
     reason = models.TextField()
     referral_note = models.TextField(blank=True)
 

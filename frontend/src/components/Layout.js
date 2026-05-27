@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
@@ -17,6 +17,8 @@ const Layout = ({ children }) => {
     logout();
     navigate('/login');
   };
+
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const initials = user?.first_name ? user.first_name.charAt(0).toUpperCase() : (user?.username ? user.username.charAt(0).toUpperCase() : 'A');
 
@@ -93,16 +95,47 @@ const Layout = ({ children }) => {
           </div>
           
           <div className="topbar-actions">
-
+            {user?.role !== 'admin' && (
+              <div className="search-bar" style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '8px 16px', width: '250px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <SearchIcon style={{ color: 'var(--text-muted)', marginRight: '8px', width: '18px', height: '18px' }} />
+                <input type="text" placeholder="Search..." style={{ background: 'transparent', border: 'none', color: '#fff', outline: 'none', fontSize: '14px', width: '100%' }} />
+              </div>
+            )}
 
             <div className="topbar-icons">
-              <button className="icon-btn">
-                <MessageIcon />
-              </button>
-              <button className="icon-btn notification-btn">
-                <BellIcon />
-                <span className="notification-dot"></span>
-              </button>
+              {user?.role !== 'admin' && (
+                <button className="icon-btn">
+                  <MessageIcon />
+                </button>
+              )}
+              <div style={{ position: 'relative' }}>
+                <button className="icon-btn notification-btn" onClick={() => setShowNotifications(!showNotifications)}>
+                  <BellIcon />
+                  <span className="notification-dot" style={{ position: 'absolute', top: 0, right: 0, width: '8px', height: '8px', background: '#ef4444', borderRadius: '50%' }}></span>
+                </button>
+                {showNotifications && user?.role === 'admin' && (
+                  <div style={{ position: 'absolute', top: '100%', right: '0', marginTop: '12px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '12px', width: '320px', padding: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', zIndex: 100, backdropFilter: 'blur(10px)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <h4 style={{ margin: 0, color: '#fff', fontSize: '15px', fontWeight: 'bold' }}>Contact Admin Requests</h4>
+                      <span style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '2px 8px', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold' }}>4 New</span>
+                    </div>
+                    {[
+                      { name: 'Dr. Tadesse', message: 'I am unable to login, please reset my password.', time: '10 mins ago' },
+                      { name: 'Guest User', message: 'Can I register for an account here?', time: '1 hour ago' },
+                      { name: 'Admin Staff', message: 'Need access to the new referral module.', time: '3 hours ago' },
+                      { name: 'Nurse Aster', message: 'My dashboard is not showing recent patients.', time: '1 day ago' },
+                    ].map((n, i) => (
+                      <div key={i} style={{ borderBottom: i < 3 ? '1px solid rgba(255,255,255,0.05)' : 'none', padding: '12px 0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={{ color: '#fff', fontSize: '13px', fontWeight: 'bold' }}>{n.name}</span>
+                          <span style={{ color: '#0ea5e9', fontSize: '11px' }}>{n.time}</span>
+                        </div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '13px', lineHeight: '1.4' }}>"{n.message}"</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="user-profile">

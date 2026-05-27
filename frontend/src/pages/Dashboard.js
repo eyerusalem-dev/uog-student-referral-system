@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
-import { getDashboardStats, getReferrals } from '../services/api';
+import { getEnhancedDashboardStats, getReferrals, updateReferral, getVisits, getDepartments } from '../services/api';
+import { useReactToPrint } from 'react-to-print';
 import { ReportIcon, UsersIcon } from '../components/Icons';
+import { saveAs } from 'file-saver';
 
 const FilterIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
@@ -11,15 +13,186 @@ const FilterIcon = () => (
 const SearchIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
 );
+const DownloadIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+);
+const PrinterIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+);
+const TrendUpIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+);
+const TrendDownIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline><polyline points="17 18 23 18 23 12"></polyline></svg>
+);
+
+// Simple Bar Chart Component
+const BarChart = ({ data, title }) => {
+  const maxValue = Math.max(...data.map(d => d.count), 1);
+  
+  return (
+    <div style={{ width: '100%' }}>
+      <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{title}</h4>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {data.map((item, idx) => (
+          <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '100px', fontSize: '13px', color: 'var(--text-muted)', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {item.label}
+            </div>
+            <div style={{ flex: 1, height: '24px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+              <div 
+                style={{ 
+                  height: '100%', 
+                  width: `${(item.count / maxValue) * 100}%`, 
+                  background: item.color || '#3B82F6',
+                  borderRadius: '4px',
+                  transition: 'width 0.5s ease-in-out',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  paddingRight: '8px'
+                }}
+              >
+                <span style={{ fontSize: '12px', color: '#fff', fontWeight: '600' }}>{item.count}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Simple Donut Chart Component
+const DonutChart = ({ data, title }) => {
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+  const size = 160;
+  const strokeWidth = 30;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  
+  let offset = 0;
+  const segments = data.map((item, idx) => {
+    const percentage = total > 0 ? item.value / total : 0;
+    const dashArray = percentage * circumference;
+    const dashOffset = circumference - dashArray;
+    const segment = { ...item, dashArray, dashOffset, offset: -offset };
+    offset += dashArray;
+    return segment;
+  });
+
+  return (
+    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{title}</h4>
+      <div style={{ position: 'relative', width: size, height: size }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          {segments.map((segment, idx) => (
+            <circle
+              key={idx}
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              fill="none"
+              stroke={segment.color}
+              strokeWidth={strokeWidth}
+              strokeDasharray={`${segment.dashArray} ${circumference}`}
+              strokeDashoffset={segment.offset}
+              style={{ transition: 'stroke-dasharray 0.5s ease-in-out' }}
+            />
+          ))}
+        </svg>
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+          <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#fff' }}>{total}</span>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>Total</span>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '16px', marginTop: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+        {data.map((item, idx) => (
+          <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: item.color }}></div>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{item.label}: {item.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Trend Indicator Component
+const TrendIndicator = ({ percentage, direction }) => {
+  if (direction === 'neutral' || percentage === 0) {
+    return <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No change</span>;
+  }
+  
+  const color = direction === 'up' ? '#10B981' : '#EF4444';
+  const Icon = direction === 'up' ? TrendUpIcon : TrendDownIcon;
+  
+  return (
+    <span style={{ fontSize: '12px', color, display: 'flex', alignItems: 'center', gap: '2px' }}>
+      <Icon /> {percentage}%
+    </span>
+  );
+};
+
+// Metric Card Component
+const MetricCard = ({ title, value, subtitle, icon, color, trend, rate, rateLabel }) => {
+  return (
+    <div className="dash-card" style={{ padding: '24px', borderRadius: '16px', position: 'relative', transition: 'transform 0.2s, box-shadow 0.2s' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+        <div>
+          <h3 style={{ margin: '0', fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{title}</h3>
+        </div>
+        {icon && (
+          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: `${color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: color }}>
+            {icon}
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+        <h2 style={{ margin: '0', fontSize: '48px', fontWeight: 'bold', color: '#fff', lineHeight: '1' }}>{value}</h2>
+        {trend && (
+          <TrendIndicator percentage={trend.percentage} direction={trend.direction} />
+        )}
+      </div>
+      {subtitle && (
+        <p style={{ margin: '8px 0 0 0', fontSize: '14px', color: 'var(--text-muted)' }}>{subtitle}</p>
+      )}
+      {rate !== undefined && (
+        <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ 
+            padding: '4px 10px', 
+            borderRadius: '12px', 
+            fontSize: '12px', 
+            fontWeight: '600',
+            background: rate >= 80 ? 'rgba(16, 185, 129, 0.15)' : rate >= 50 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+            color: rate >= 80 ? '#10B981' : rate >= 50 ? '#F59E0B' : '#EF4444'
+          }}>
+            {rateLabel || 'Rate'}: {rate}%
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [calendarDate] = useState(new Date());
+  const [dateRange, setDateRange] = useState('month');
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
+  const [departments, setDepartments] = useState([]);
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [showCustomRange, setShowCustomRange] = useState(false);
   const [recentReferrals, setRecentReferrals] = useState([]);
   const [referralsLoading, setReferralsLoading] = useState(true);
   
+  const printRef = useRef();
+  const handlePrint = useReactToPrint({
+    content: () => printRef.current,
+  });
+
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -27,8 +200,9 @@ const Dashboard = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const formattedUTC = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'UTC',
+  // Format time in EAT (East Africa Time - UTC+3)
+  const formattedEAT = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Africa/Addis_Ababa',
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -37,20 +211,183 @@ const Dashboard = () => {
     minute: '2-digit',
     second: '2-digit',
     hour12: true
-  }).format(currentTime) + ' UTC';
-  
-  // Clinician State
-  const [clinicianFilter, setClinicianFilter] = useState('All');
-  const [clinicianSearch, setClinicianSearch] = useState('');
+  }).format(currentTime) + ' EAT (UTC+3)';
 
-  const mockClinicianPatients = [
-    { initials: 'BH', color: '#10b981', name: 'Bereket Haile', id: 'UOG/14321/17', status: 'Done', sColor: '#10b981', refStatus: 'Accepted', visit: 'Today, 09:45 AM', cc: 'Persistent cough, low-grade fever', dx: 'Upper respiratory tract infection' },
-    { initials: 'LT', color: '#8b5cf6', name: 'Liya Tadesse', id: 'UOG/06543/16', status: 'Waiting for lab', sColor: '#f59e0b', refStatus: 'Pending', visit: 'Today, 10:15 AM', cc: 'Recurrent wheezing, chest tightness', dx: 'Asthma exacerbation' },
-    { initials: 'YB', color: '#f59e0b', name: 'Yohannes Bekele', id: 'UOG/07122/16', status: 'Done', sColor: '#10b981', refStatus: 'Accepted', visit: 'Today, 10:00 AM', cc: 'Increased thirst, frequent urination', dx: 'Type 2 Diabetes' },
-    { initials: 'AG', color: '#ef4444', name: 'Abel Getachew', id: 'UOG/10234/15', status: 'Waiting for lab', sColor: '#f59e0b', refStatus: 'Pending', visit: 'Today, 08:30 AM', cc: 'Chronic headache, blurry vision', dx: 'Migraine' },
-    { initials: 'SM', color: '#3b82f6', name: 'Sara Mengistu', id: 'UOG/18334/18', status: 'Done', sColor: '#10b981', refStatus: 'Accepted', visit: 'Today, 07:50 AM', cc: 'Abdominal pain, nausea', dx: 'Acute gastroenteritis' },
-    { initials: 'DF', color: '#1b64f2', name: 'Daniel Fikru', id: 'UOG/22456/17', status: 'Waiting for lab', sColor: '#f59e0b', refStatus: 'Pending', visit: 'Today, 11:20 AM', cc: 'Ankle sprain after sports', dx: 'Grade II ankle sprain' },
-  ];
+  // Fetch departments for filter
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const res = await getDepartments();
+        setDepartments(res.data);
+      } catch (err) {
+        console.error('Failed to load departments', err);
+      }
+    };
+    fetchDepartments();
+  }, []);
+
+  // Fetch enhanced dashboard stats
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      fetchEnhancedStats();
+      fetchRecentReferrals();
+    } else {
+      setLoading(false);
+    }
+  }, [user, dateRange, selectedDepartment, customStartDate, customEndDate]);
+
+  const fetchRecentReferrals = async () => {
+    if (user?.role === 'admin') {
+      try {
+        const res = await getReferrals();
+        setRecentReferrals(res.data.slice(0, 5));
+      } catch (err) {
+        console.error('Failed to load recent referrals', err);
+      } finally {
+        setReferralsLoading(false);
+      }
+    }
+  };
+
+  const fetchEnhancedStats = async () => {
+    setLoading(true);
+    try {
+      const params = { range: dateRange };
+      if (dateRange === 'custom') {
+        params.start_date = customStartDate;
+        params.end_date = customEndDate;
+      }
+      if (selectedDepartment !== 'all') {
+        params.department = selectedDepartment;
+      }
+      
+      const res = await getEnhancedDashboardStats(params);
+      setStats(res.data);
+    } catch (err) {
+      console.error('Failed to load dashboard stats', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Export to CSV
+  const exportToCSV = () => {
+    if (!stats) return;
+    
+    const rows = [
+      ['Dashboard Report'],
+      [`Date Range: ${stats.date_range.start} to ${stats.date_range.end}`],
+      [],
+      ['Referral Metrics'],
+      ['Total Referrals', stats.referrals.total],
+      ['Pending', stats.referrals.pending],
+      ['Accepted', stats.referrals.accepted],
+      ['Declined', stats.referrals.declined],
+      ['Acceptance Rate', `${stats.referrals.acceptance_rate}%`],
+      [],
+      ['Lab Metrics'],
+      ['Total Lab Requests', stats.lab.total],
+      ['Completed', stats.lab.completed],
+      ['Pending', stats.lab.pending],
+      ['Completion Rate', `${stats.lab.completion_rate}%`],
+      [],
+      ['Prescription Metrics'],
+      ['Total Prescriptions', stats.prescriptions.total],
+      ['Dispensed', stats.prescriptions.dispensed],
+      ['Out of Stock', stats.prescriptions.out_of_stock],
+      ['Pending', stats.prescriptions.pending],
+      ['Fulfillment Rate', `${stats.prescriptions.fulfillment_rate}%`],
+      [],
+      ['Department Breakdown'],
+      ['Department', 'Total', 'Pending', 'Accepted', 'Declined']
+    ];
+    
+    stats.department_breakdown.forEach(dept => {
+      rows.push([
+        dept.department_name,
+        dept.count,
+        dept.pending,
+        dept.accepted,
+        dept.declined
+      ]);
+    });
+
+    const csvContent = rows.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    saveAs(blob, `dashboard_report_${stats.date_range.range_type}.csv`);
+  };
+
+  // Handle date range change
+  const handleDateRangeChange = (range) => {
+    setDateRange(range);
+    setShowCustomRange(range === 'custom');
+  };
+
+  // Format date range display
+  const formatDateRangeDisplay = () => {
+    if (!stats) return '';
+    const start = new Date(stats.date_range.start);
+    const end = new Date(stats.date_range.end);
+    return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  };
+
+  // Clinician State
+  const [todaysConsultations, setTodaysConsultations] = useState([]);
+  const [consultationsLoading, setConsultationsLoading] = useState(true);
+
+  const isToday = (iso) => {
+    const d = new Date(iso);
+    const today = new Date();
+    return d.getUTCFullYear() === today.getUTCFullYear()
+      && d.getUTCMonth() === today.getUTCMonth()
+      && d.getUTCDate() === today.getUTCDate();
+  };
+
+  useEffect(() => {
+    if (user?.role === 'clinician' || user?.role === 'admin') {
+      const fetchConsultations = async () => {
+        try {
+          const [visitRes, referralRes] = await Promise.all([
+            getVisits({}),
+            getReferrals({})
+          ]);
+          const visits = visitRes.data.filter(v => v.clinician_username === user.username && isToday(v.created_at));
+          const referrals = referralRes.data.filter(r => r.referred_by_username === user.username && isToday(r.created_at));
+          const combined = [];
+          visits.forEach(v => {
+            combined.push({
+              type: 'Note',
+              studentName: v.student_name,
+              studentId: v.student_university_id,
+              time: new Date(v.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              id: v.id
+            });
+          });
+          referrals.forEach(r => {
+            combined.push({
+              type: 'Referral',
+              studentName: r.student_name,
+              studentId: r.student_university_id,
+              time: new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              id: r.referral_id
+            });
+          });
+          combined.sort((a, b) => new Date(b.time) - new Date(a.time));
+          setTodaysConsultations(combined);
+        } catch (e) {
+          console.error('Failed to load consultations', e);
+        } finally {
+          setConsultationsLoading(false);
+        }
+      };
+      fetchConsultations();
+    }
+  }, [user]);
+
+  const [clinicianSearch, setClinicianSearch] = useState('');
+  const [clinicianFilter, setClinicianFilter] = useState('All');
+
+  const mockClinicianPatients = [];
 
   const filteredClinicianPatients = mockClinicianPatients.filter(pt => {
     const matchesSearch = pt.name.toLowerCase().includes(clinicianSearch.toLowerCase()) || 
@@ -70,11 +407,7 @@ const Dashboard = () => {
   const [labFilter, setLabFilter] = useState('All');
   const [labSearch, setLabSearch] = useState('');
 
-  const mockLabRequests = [
-    { student_id: 1, name: 'Mekdes Alemu', id: 'UOG/20341/17', sub: 'Student Clinic', test: 'CBC + ESR', specimen: 'Whole Blood', priority: 'Urgent', priorityColor: '#f59e0b', status: 'Pending Collection', statusColor: '#f59e0b', date1: 'Today, 08:10', date2: 'AM' },
-    { student_id: 2, name: 'Samuel Teka', id: 'UOG/18452/16', sub: 'OPD Room 3', test: 'Blood Glucose', specimen: 'Serum', priority: 'Routine', priorityColor: 'var(--text-muted)', status: 'Result updated', statusColor: '#10b981', date1: 'Today, 08:30', date2: 'AM' },
-    { student_id: 3, name: 'Hanna Tadesse', id: 'UOG/12345/15', sub: 'Dorm Block B', test: 'Urinalysis', specimen: 'Urine', priority: 'Routine', priorityColor: 'var(--text-muted)', status: 'Pending', statusColor: '#f59e0b', date1: 'Yesterday, 14:00', date2: 'PM' },
-  ];
+  const mockLabRequests = [];
 
   const filteredLabRequests = mockLabRequests.filter(req => {
     if (labFilter !== 'All') {
@@ -93,10 +426,7 @@ const Dashboard = () => {
   // Pharmacy State
   const [pharmacyFilter, setPharmacyFilter] = useState('All');
   const [pharmacySearch, setPharmacySearch] = useState('');
-  const [pharmacyRequests, setPharmacyRequests] = useState([
-    { id: 1, name: 'Bereket Haile', studentId: 'UOG/14321/17', med: 'Amoxicillin 500mg', dosage: '3x daily, 7 days', status: 'Pending Review', date1: 'Today,', date2: '09:45 AM' },
-    { id: 2, name: 'Liya Tadesse', studentId: 'UOG/06543/16', med: 'Salbutamol Inhaler', dosage: '2 puffs as needed', status: 'Pending Review', date1: 'Today,', date2: '10:15 AM' }
-  ]);
+  const [pharmacyRequests, setPharmacyRequests] = useState([]);
 
   const filteredPharmacyRequests = pharmacyRequests.filter(req => {
     if (pharmacyFilter !== 'All') {
@@ -113,39 +443,62 @@ const Dashboard = () => {
     setPharmacyRequests(prev => prev.map(req => req.id === id ? { ...req, status: newStatus } : req));
   };
 
-  useEffect(() => {
-    if (user?.role === 'admin') {
-      fetchStats();
-      fetchRecentReferrals();
-    } else {
-      setLoading(false);
-    }
-  }, [user]);
+  // Intake Team State
+  const [intakeFilter, setIntakeFilter] = useState('All');
+  const [intakeSearch, setIntakeSearch] = useState('');
+  const [intakeReferrals, setIntakeReferrals] = useState([]);
+  const [intakeLoading, setIntakeLoading] = useState(true);
+  const [selectedReferral, setSelectedReferral] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
-  const fetchStats = async () => {
-    try {
-      const res = await getDashboardStats();
-      setStats(res.data);
-    } catch (err) {
-      console.error('Failed to load dashboard stats', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchRecentReferrals = async () => {
-    if (user?.role === 'admin') {
+  const fetchIntakeReferrals = async () => {
+    if (user?.role === 'intake_team') {
       try {
         const res = await getReferrals();
-        setRecentReferrals(res.data.slice(0, 5));
+        setIntakeReferrals(res.data);
       } catch (err) {
-        console.error('Failed to load recent referrals', err);
+        console.error('Failed to load referrals', err);
       } finally {
-        setReferralsLoading(false);
+        setIntakeLoading(false);
       }
     }
   };
 
+  useEffect(() => {
+    fetchIntakeReferrals();
+    const intervalId = setInterval(fetchIntakeReferrals, 30000);
+    return () => clearInterval(intervalId);
+  }, [user]);
+
+  const filteredIntakeReferrals = intakeReferrals.filter(ref => {
+    const q = intakeSearch.toLowerCase();
+    const matchesSearch = 
+      (ref.student_name && ref.student_name.toLowerCase().includes(q)) ||
+      (ref.student_university_id && ref.student_university_id.toLowerCase().includes(q)) ||
+      (ref.referral_id && ref.referral_id.toLowerCase().includes(q));
+      
+    if (!matchesSearch) return false;
+    if (intakeFilter === 'All') return true;
+    if (intakeFilter === 'Pending') return ref.status === 'pending';
+    if (intakeFilter === 'Accepted') return ref.status === 'accepted';
+    if (intakeFilter === 'Declined') return ref.status === 'declined';
+    return true;
+  });
+
+  const handleUpdateStatus = async (id, status) => {
+    try {
+      await updateReferral(id, { status });
+      alert(`Referral ${status} successfully!`);
+      setShowModal(false);
+      fetchIntakeReferrals();
+    } catch (err) {
+      alert('Failed to update status');
+      console.error(err);
+    }
+  };
+
+  // Calendar state
+  const [calendarDate] = useState(new Date());
   const daysInMonth = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1).getDay();
   const days = [];
@@ -163,46 +516,308 @@ const Dashboard = () => {
   return (
     <Layout>
       {user?.role !== 'pharmacist' && user?.role !== 'lab_technician' && user?.role !== 'clinician' && (
-        <>
-          <h1 style={{ fontSize: '36px', margin: '0 0 8px 0', color: '#fff' }}>
-            {user?.role === 'admin' ? 'Admin Dashboard' : `Hi, ${user?.username || 'User'}`}
-          </h1>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '30px', fontSize: '15px' }}>
-            Welcome back, {user?.username || 'admin'} • {user?.role === 'intake_team' ? 'Intake Team' : user?.role || 'admin'}
-          </p>
-        </>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <h1 style={{ fontSize: '36px', margin: '0 0 8px 0', color: '#fff' }}>
+              {user?.role === 'admin' ? 'Admin Dashboard' : `Hi, ${user?.username || 'User'}`}
+            </h1>
+            <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '15px' }}>
+              Welcome back, {user?.username || 'admin'} • {user?.role === 'intake_team' ? 'Intake Team' : user?.role || 'admin'}
+            </p>
+          </div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '14px', background: 'var(--card-bg)', padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--card-border)' }}>
+            {formattedEAT}
+          </div>
+        </div>
       )}
 
       {user?.role === 'admin' && (
-        <>
-          {/* STATS ROW: Cards side by side */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '24px', marginBottom: '24px' }}>
-            <Link to="/referrals?tab=all" className="dash-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', textDecoration: 'none', transition: 'transform 0.2s, box-shadow 0.2s' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Students Referred</h3>
-              <h2 style={{ fontSize: '48px', margin: '0', color: '#fff', lineHeight: '1' }}>{displayStats.referrals_this_month}</h2>
-            </Link>
-            <Link to="/users?filter=New+Staff" className="dash-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', textDecoration: 'none', transition: 'transform 0.2s, box-shadow 0.2s' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>New Staff This Month</h3>
-              <h2 style={{ fontSize: '48px', margin: '0', color: '#fff', lineHeight: '1' }}>{displayStats.new_staff_this_month}</h2>
-            </Link>
-            <Link to="/referrals" className="dash-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', textDecoration: 'none', transition: 'transform 0.2s, box-shadow 0.2s' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Referrals</h3>
-              <h2 style={{ fontSize: '48px', margin: '0', color: '#fff', lineHeight: '1' }}>{displayStats.total_referrals}</h2>
-            </Link>
+        <div ref={printRef}>
+          {/* Report Controls */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+              {/* Date Range Selector */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Date:</span>
+                <select 
+                  value={dateRange} 
+                  onChange={(e) => handleDateRangeChange(e.target.value)}
+                  style={{ 
+                    padding: '8px 12px', 
+                    background: 'var(--card-bg)', 
+                    color: '#fff', 
+                    border: '1px solid var(--card-border)', 
+                    borderRadius: '8px', 
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="today">Today</option>
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                  <option value="quarter">This Quarter</option>
+                  <option value="year">This Year</option>
+                  <option value="custom">Custom Range</option>
+                </select>
+              </div>
+
+              {/* Custom Date Range */}
+              {showCustomRange && (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input 
+                    type="date" 
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    style={{ 
+                      padding: '8px 12px', 
+                      background: 'var(--card-bg)', 
+                      color: '#fff', 
+                      border: '1px solid var(--card-border)', 
+                      borderRadius: '8px', 
+                      fontSize: '14px',
+                      outline: 'none'
+                    }}
+                  />
+                  <span style={{ color: 'var(--text-muted)' }}>to</span>
+                  <input 
+                    type="date" 
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    style={{ 
+                      padding: '8px 12px', 
+                      background: 'var(--card-bg)', 
+                      color: '#fff', 
+                      border: '1px solid var(--card-border)', 
+                      borderRadius: '8px', 
+                      fontSize: '14px',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Department Filter */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Department:</span>
+                <select 
+                  value={selectedDepartment}
+                  onChange={(e) => setSelectedDepartment(e.target.value)}
+                  style={{ 
+                    padding: '8px 12px', 
+                    background: 'var(--card-bg)', 
+                    color: '#fff', 
+                    border: '1px solid var(--card-border)', 
+                    borderRadius: '8px', 
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="all">All Departments</option>
+                  {departments.map(dept => (
+                    <option key={dept.id} value={dept.id}>{dept.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Date Range Display */}
+              {stats && (
+                <span style={{ fontSize: '14px', color: 'var(--text-muted)', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+                  {formatDateRangeDisplay()}
+                </span>
+              )}
+            </div>
+
+            {/* Export Buttons */}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                onClick={exportToCSV}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  padding: '8px 16px', 
+                  background: 'var(--card-bg)', 
+                  color: '#fff', 
+                  border: '1px solid var(--card-border)', 
+                  borderRadius: '8px', 
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s'
+                }}
+              >
+                <DownloadIcon /> Export CSV
+              </button>
+              <button 
+                onClick={handlePrint}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  padding: '8px 16px', 
+                  background: 'var(--primary-blue)', 
+                  color: '#fff', 
+                  border: 'none', 
+                  borderRadius: '8px', 
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s'
+                }}
+              >
+                <PrinterIcon /> Print Report
+              </button>
+            </div>
           </div>
 
-          {/* MAIN CONTENT SPLIT */}
-          <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-            
-            {/* Left Side: Recent Referrals Table */}
-            <div style={{ flex: 1, minWidth: '600px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div className="dash-card" style={{ padding: 0, overflow: 'hidden' }}>
+          {loading ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading dashboard data...</div>
+          ) : stats ? (
+            <>
+              {/* METRICS CARDS ROW */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+                <MetricCard
+                  title="Total Referrals"
+                  value={stats.referrals.total}
+                  trend={stats.referrals.trends.total}
+                  color="#3B82F6"
+                  icon={<ReportIcon />}
+                />
+                <MetricCard
+                  title="Pending"
+                  value={stats.referrals.pending}
+                  subtitle="Awaiting review"
+                  trend={stats.referrals.trends.pending}
+                  color="#F59E0B"
+                  icon={
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  }
+                />
+                <MetricCard
+                  title="Accepted"
+                  value={stats.referrals.accepted}
+                  subtitle="Approved referrals"
+                  trend={stats.referrals.trends.accepted}
+                  color="#10B981"
+                  icon={
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
+                  }
+                />
+                <MetricCard
+                  title="Declined"
+                  value={stats.referrals.declined}
+                  subtitle="Rejected referrals"
+                  trend={stats.referrals.trends.declined}
+                  color="#EF4444"
+                  icon={
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  }
+                />
+              </div>
+
+              {/* SECOND ROW: Lab, Prescription, Clinical Visits */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+                <MetricCard
+                  title="Lab Requests"
+                  value={stats.lab.total}
+                  rate={stats.lab.completion_rate}
+                  rateLabel="Completion"
+                  color="#8B5CF6"
+                  icon={
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 3h6v2H9zM10 5v6l-4 8h12l-4-8V5"/><circle cx="12" cy="15" r="2"/></svg>
+                  }
+                />
+                <MetricCard
+                  title="Prescriptions"
+                  value={stats.prescriptions.total}
+                  rate={stats.prescriptions.fulfillment_rate}
+                  rateLabel="Fulfillment"
+                  color="#06B6D4"
+                  icon={
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5v14"/></svg>
+                  }
+                />
+                <MetricCard
+                  title="Clinical Visits"
+                  value={stats.clinical_visits}
+                  subtitle="Patient consultations"
+                  color="#EC4899"
+                  icon={
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4.8 2.3A.3.3 0 0 0 5 2h14a.3.3 0 0 1 .3.3v19.4a.3.3 0 0 1-.3.3H5a.3.3 0 0 1-.3-.3z"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
+                  }
+                />
+              </div>
+
+              {/* THIRD ROW: Additional Metrics */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+                <MetricCard
+                  title="Students Referred"
+                  value={stats.referrals.students_referred}
+                  subtitle="Unique students"
+                  color="#14B8A6"
+                  icon={<UsersIcon />}
+                />
+                {stats.most_active_clinician && (
+                  <MetricCard
+                    title="Most Active Clinician"
+                    value={stats.most_active_clinician.referrals}
+                    subtitle={stats.most_active_clinician.name}
+                    color="#F59E0B"
+                    icon={
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    }
+                  />
+                )}
+                <MetricCard
+                  title="Active Users"
+                  value={stats.active_users}
+                  subtitle="This period"
+                  color="#6366F1"
+                  icon={
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  }
+                />
+                <Link to="/audit-logs" className="dash-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', textDecoration: 'none', transition: 'transform 0.2s, box-shadow 0.2s' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Audit Logs</h3>
+                  <h2 style={{ fontSize: '48px', margin: '0', color: '#fff', lineHeight: '1' }}>View</h2>
+                </Link>
+              </div>
+
+              {/* VISUALIZATIONS SECTION */}
+              <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', marginBottom: '24px' }}>
+                {/* Bar Chart - Referrals by Department (60% width) */}
+                <div className="dash-card" style={{ flex: '1 1 60%', padding: '24px', borderRadius: '16px', minWidth: '400px' }}>
+                  <BarChart 
+                    title="Referrals by Department"
+                    data={stats.department_breakdown.map(dept => ({
+                      label: dept.department_name,
+                      count: dept.count,
+                      color: '#3B82F6'
+                    }))}
+                  />
+                </div>
+
+                {/* Donut Chart - Status Distribution (40% width) */}
+                <div className="dash-card" style={{ flex: '1 1 40%', padding: '24px', borderRadius: '16px', minWidth: '300px' }}>
+                  <DonutChart
+                    title="Referral Status Distribution"
+                    data={stats.status_distribution.map(s => ({
+                      label: s.status,
+                      value: s.count,
+                      color: s.color
+                    }))}
+                  />
+                </div>
+              </div>
+
+              {/* RECENT REFERRALS TABLE */}
+              <div className="dash-card" style={{ padding: 0, overflow: 'hidden', borderRadius: '16px' }}>
                 <div style={{ padding: '24px 32px' }}>
                   <h3 style={{ margin: 0, fontSize: '20px', color: '#fff', fontWeight: 'bold' }}>Recent Referred Students</h3>
                 </div>
                 {referralsLoading ? (
-                  <p style={{ padding: '0 32px 32px' }}>Loading recent referrals...</p>
-                ) : (recentReferrals.length > 0 || true) ? (
+                  <p style={{ padding: '0 32px 32px', color: 'var(--text-muted)' }}>Loading recent referrals...</p>
+                ) : recentReferrals.length > 0 ? (
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -214,11 +829,7 @@ const Dashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {(recentReferrals.length > 0 ? recentReferrals : [
-                        { referral_id: 1, student_id: 1, student_name: 'Nahom Yonas', receiving_department_name: 'General Medical', status: 'pending', created_at: '2026-05-24T10:00:00Z' },
-                        { referral_id: 2, student_id: 2, student_name: 'Nahom Yonas', receiving_department_name: 'General Medical', status: 'pending', created_at: '2026-05-21T10:00:00Z' },
-                        { referral_id: 3, student_id: 3, student_name: 'Nahom Yonas', receiving_department_name: 'General Medical', status: 'accepted', created_at: '2026-05-20T10:00:00Z' },
-                      ]).map((ref) => (
+                      {recentReferrals.map((ref) => (
                         <tr key={ref.referral_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                           <td style={{ padding: '24px 32px' }}>
                             <Link to={`/students/${ref.student_id || 1}`} style={{ color: '#fff', fontWeight: '600', fontSize: '15px', textDecoration: 'none' }} className="hover-underline">
@@ -254,85 +865,43 @@ const Dashboard = () => {
                   <p style={{ padding: '0 32px 32px', color: 'var(--text-muted)' }}>No recent referrals found.</p>
                 )}
               </div>
-            </div>
-
-            {/* Right Side: Calendar and Staff List */}
-            <div style={{ width: '400px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div className="dash-card">
-                <h3 style={{ marginTop: 0, fontSize: '20px', color: '#fff', marginBottom: '24px' }}>{calendarDate.toLocaleDateString('default', { month: 'long', year: 'numeric' })}</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '10px', textAlign: 'center' }}>
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                    <div key={d} style={{ fontWeight: '500', color: 'var(--text-muted)', fontSize: '14px', marginBottom: '10px' }}>{d}</div>
-                  ))}
-                  {days.map((day, idx) => {
-                    const isToday = day === 25; // hardcoded for demo matching screenshot
-                    const hasDot = [5, 12, 14, 18].includes(day);
-
-                    return (
-                      <div
-                        key={idx}
-                        style={{
-                          height: '40px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          position: 'relative',
-                          borderRadius: '8px',
-                          backgroundColor: isToday ? 'var(--primary-blue)' : 'transparent',
-                          color: isToday ? '#fff' : (day ? '#fff' : 'transparent'),
-                          fontWeight: isToday ? 'bold' : 'normal',
-                          fontSize: '15px'
-                        }}
-                      >
-                        {day || ''}
-                        {hasDot && !isToday && (
-                          <div style={{ position: 'absolute', bottom: '4px', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--primary-blue)' }}></div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="dash-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                  <h3 style={{ margin: 0, fontSize: '18px', color: '#fff', fontWeight: 'bold' }}>Notifications</h3>
-                  <Link to="/notifications" style={{ color: 'var(--primary-blue)', fontSize: '14px', fontWeight: '600', textDecoration: 'none' }}>See All</Link>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                  {[
-                    { title: 'New referral received from Emergency', time: '2 mins ago', unread: true, icon: 'R', color: '#10b981' },
-                    { title: 'Dr. Abebe approved referral #1024', time: '1 hour ago', unread: true, icon: 'A', color: 'var(--primary-blue)' },
-                    { title: 'System maintenance scheduled tonight', time: '4 hours ago', unread: false, icon: 'S', color: '#f59e0b' },
-                    { title: 'Jane Doe checked in at General Med', time: '1 day ago', unread: false, icon: 'C', color: '#8b5cf6' },
-                  ].map((notif, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: `rgba(${parseInt(notif.color.slice(1, 3) || '255', 16)}, ${parseInt(notif.color.slice(3, 5) || '255', 16)}, ${parseInt(notif.color.slice(5, 7) || '255', 16)}, 0.1)`, color: notif.color, border: `1px solid ${notif.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px' }}>
-                        {notif.icon}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ color: notif.unread ? '#fff' : 'var(--text-muted)', fontWeight: notif.unread ? '600' : 'normal', fontSize: '14px', lineHeight: '1.4' }}>{notif.title}</div>
-                        <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px' }}>{notif.time}</div>
-                      </div>
-                      {notif.unread && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary-blue)' }}></div>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
+            </>
+          ) : null}
+        </div>
       )}
 
-
+      {/* Clinician Dashboard */}
       {user?.role === 'clinician' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '32px', alignItems: 'start' }}>
-          
-          {/* Left Column: Today's Consultations */}
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '20px', color: '#fff', marginBottom: '12px' }}>Today's Consultations</h3>
+            {consultationsLoading ? (
+              <p style={{ color: 'var(--text-muted)' }}>Loading...</p>
+            ) : todaysConsultations.length === 0 ? (
+              <p style={{ color: 'var(--text-muted)' }}>No consultations today</p>
+            ) : (
+              <ul style={{ listStyle: 'none', padding: 0 }}>
+                {todaysConsultations.map((c, idx) => (
+                  <li key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div>
+                      <span style={{ color: '#f8fafc', fontWeight: '600' }}>{c.studentName}</span>
+                      <span style={{ color: 'var(--text-muted)', marginLeft: '8px' }}>ID: {c.studentId}</span>
+                      <span style={{ color: '#10b981', marginLeft: '8px' }}>{c.type}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ color: '#e2e8f0', fontSize: '13px' }}>{c.time}</span>
+                      <Link to={`/students/${c.studentId}`} style={{ color: '#0ea5e9', fontWeight: '600', textDecoration: 'none' }}>View</Link>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
               <h2 style={{ fontSize: '22px', color: '#fff', margin: 0, fontWeight: 'bold' }}>Today's Consultations</h2>
-              <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>{formattedUTC}</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>{formattedEAT}</div>
             </div>
             
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '24px', alignItems: 'center' }}>
@@ -353,7 +922,6 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Grid of Patient Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
               {filteredClinicianPatients.map((pt, i) => (
                 <div key={i} className="dash-card" style={{ padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
@@ -404,30 +972,25 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Right Column: Quick Actions vertically */}
           <div className="dash-card" style={{ padding: '24px', borderRadius: '16px', position: 'sticky', top: '24px' }}>
             <h3 style={{ margin: '0 0 24px 0', fontSize: '18px', color: '#fff', fontWeight: '700' }}>Quick Actions</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Button 1: New Visit */}
               <Link to="/referrals/new" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '12px', textDecoration: 'none', transition: 'all 0.2s' }} className="hover-card">
                 <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>+</div>
                 <span style={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}>New Visit</span>
               </Link>
-              {/* Button 2: Register a student */}
               <Link to="/students/new" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '12px', textDecoration: 'none', transition: 'all 0.2s' }} className="hover-card">
                 <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <UsersIcon style={{ width: '20px', height: '20px' }} />
                 </div>
                 <span style={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}>Register a student</span>
               </Link>
-              {/* Button 3: Students */}
               <Link to="/students" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '12px', textDecoration: 'none', transition: 'all 0.2s' }} className="hover-card">
                 <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(168, 85, 247, 0.1)', color: '#a855f7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <SearchIcon style={{ width: '20px', height: '20px' }} />
                 </div>
                 <span style={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}>Students</span>
               </Link>
-              {/* Button 4: Refer Out */}
               <Link to="/referrals/new" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '12px', textDecoration: 'none', transition: 'all 0.2s' }} className="hover-card">
                 <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
@@ -439,19 +1002,171 @@ const Dashboard = () => {
         </div>
       )}
 
+      {/* Intake Team Dashboard */}
       {user?.role === 'intake_team' && (
-        <div className="dash-card">
-          <h3>Incoming Referrals</h3>
-          <p>Review referrals sent to your department.</p>
-          <Link to="/referrals" className="btn">View Referrals</Link>
+        <div style={{ marginTop: '10px' }}>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', overflowX: 'auto', paddingBottom: '4px', alignItems: 'center' }}>
+            {['All', 'Pending', 'Accepted', 'Declined'].map(f => (
+              <button 
+                key={f} 
+                onClick={() => setIntakeFilter(f)} 
+                style={{ 
+                  background: intakeFilter === f ? '#3b82f6' : 'rgba(255,255,255,0.05)', 
+                  color: intakeFilter === f ? '#fff' : '#e2e8f0', 
+                  border: 'none', 
+                  padding: '10px 20px', 
+                  borderRadius: '8px', 
+                  fontSize: '14px', 
+                  fontWeight: '600', 
+                  cursor: 'pointer',
+                  transition: 'background 0.2s',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {f}
+              </button>
+            ))}
+            <button 
+              onClick={fetchIntakeReferrals} 
+              style={{ background: 'transparent', color: '#10b981', border: '1px solid #10b981', padding: '10px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', marginLeft: 'auto' }}
+            >
+              Refresh
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', padding: '12px 16px', borderRadius: '8px', color: 'var(--text-muted)', marginBottom: '32px', width: '100%', maxWidth: '400px' }}>
+            <input 
+              type="text" 
+              placeholder="Search name, ID, tracking ID..." 
+              value={intakeSearch} 
+              onChange={(e) => setIntakeSearch(e.target.value)} 
+              style={{ background: 'transparent', border: 'none', color: '#fff', outline: 'none', width: '100%', fontSize: '15px' }} 
+            />
+            <SearchIcon style={{ color: 'var(--text-muted)', width: '18px', height: '18px', marginLeft: '8px' }} />
+          </div>
+
+          {intakeLoading ? (
+            <p style={{ color: 'var(--text-muted)' }}>Loading referrals...</p>
+          ) : filteredIntakeReferrals.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+              <div style={{ fontSize: '32px', marginBottom: '16px' }}>📭</div>
+              No pending referrals found matching your criteria.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '24px' }}>
+              {filteredIntakeReferrals.map((ref) => {
+                const initials = ref.student_name ? ref.student_name.split(' ').map(n => n[0]).join('') : '?';
+                const borderColor = ref.urgency === 'Critical' ? 'rgba(239, 68, 68, 0.5)' : ref.urgency === 'Urgent' ? 'rgba(245, 158, 11, 0.5)' : 'rgba(255,255,255,0.1)';
+                
+                return (
+                  <div 
+                    key={ref.referral_id} 
+                    className="dash-card" 
+                    onClick={() => { setSelectedReferral(ref); setShowModal(true); }}
+                    style={{ padding: '24px', position: 'relative', border: `1px solid ${borderColor}`, borderRadius: '16px', cursor: 'pointer', transition: 'transform 0.2s' }}
+                  >
+                    <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#3b82f6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 'bold' }}>
+                        {initials}
+                      </div>
+                      <div>
+                        <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', color: '#fff', fontWeight: 'bold' }}>{ref.student_name}</h3>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>{ref.student_university_id}</div>
+                      </div>
+                      <div style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-muted)' }}>
+                        {new Date(ref.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+
+                    <div style={{ color: '#e2e8f0', fontSize: '14px', lineHeight: '1.5', marginBottom: '20px', height: '42px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {ref.reason}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                      <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', background: 'rgba(255,255,255,0.1)', color: '#fff' }}>{ref.status.toUpperCase()}</span>
+                      <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', background: borderColor, color: '#fff' }}>{ref.urgency}</span>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>ID: {ref.referral_id}</span>
+                    </div>
+
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
+      {/* DETAIL MODAL */}
+      {showModal && selectedReferral && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px' }}>
+          <div style={{ background: '#1e293b', width: '100%', maxWidth: '700px', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
+            
+            <div ref={printRef} style={{ padding: '32px', overflowY: 'auto', background: '#fff', color: '#000' }}>
+              <div style={{ borderBottom: '2px solid #e2e8f0', paddingBottom: '16px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <h2 style={{ margin: '0 0 8px 0', color: '#0f172a' }}>University of Gondar Referral Hospital</h2>
+                  <div style={{ color: '#64748b', fontSize: '14px' }}>Clinical Referral Transfer</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '18px', color: '#0f172a' }}>{selectedReferral.referral_id}</div>
+                  <div style={{ color: '#64748b', fontSize: '13px' }}>{new Date(selectedReferral.created_at).toLocaleString()}</div>
+                </div>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+                <div>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#64748b', textTransform: 'uppercase', fontSize: '12px' }}>Patient Details</h4>
+                  <p style={{ margin: '0 0 4px 0', fontWeight: 'bold' }}>{selectedReferral.student_name}</p>
+                  <p style={{ margin: '0' }}>ID: {selectedReferral.student_university_id}</p>
+                </div>
+                <div>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#64748b', textTransform: 'uppercase', fontSize: '12px' }}>Referral Details</h4>
+                  <p style={{ margin: '0 0 4px 0' }}><strong>To:</strong> {selectedReferral.receiving_department_name}</p>
+                  <p style={{ margin: '0 0 4px 0' }}><strong>Urgency:</strong> {selectedReferral.urgency}</p>
+                  <p style={{ margin: '0' }}><strong>By:</strong> {selectedReferral.referred_by_username}</p>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '24px' }}>
+                <h4 style={{ margin: '0 0 8px 0', color: '#64748b', textTransform: 'uppercase', fontSize: '12px' }}>Chief Complaint / Reason</h4>
+                <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  {selectedReferral.reason}
+                </div>
+              </div>
+
+              {selectedReferral.clinical_visit_details && (
+                <div style={{ marginBottom: '24px' }}>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#64748b', textTransform: 'uppercase', fontSize: '12px' }}>Attached Clinical Notes</h4>
+                  <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px' }}>
+                    <p style={{ margin: '0 0 8px' }}><strong>Symptoms:</strong> {selectedReferral.clinical_visit_details.symptoms}</p>
+                    <p style={{ margin: '0 0 8px' }}><strong>Diagnosis:</strong> {selectedReferral.clinical_visit_details.diagnosis}</p>
+                    <p style={{ margin: '0' }}><strong>Treatment:</strong> {selectedReferral.clinical_visit_details.treatment}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: '16px 24px', background: '#0f172a', display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              <button onClick={() => setShowModal(false)} style={{ padding: '8px 16px', background: 'transparent', color: '#94a3b8', border: '1px solid #475569', borderRadius: '6px', cursor: 'pointer' }}>Close</button>
+              <button onClick={handlePrint} style={{ padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Print PDF</button>
+              
+              {user?.role === 'intake_team' && selectedReferral.status === 'pending' && (
+                <>
+                  <button onClick={() => handleUpdateStatus(selectedReferral.referral_id, 'declined')} style={{ padding: '8px 16px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Decline</button>
+                  <button onClick={() => handleUpdateStatus(selectedReferral.referral_id, 'accepted')} style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Accept</button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pharmacist Dashboard */}
       {user?.role === 'pharmacist' && (
         <div style={{ marginTop: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
             <h2 style={{ color: '#fff', fontSize: '24px', margin: 0, fontWeight: 'bold' }}>Recent Prescriptions</h2>
-            <div style={{ color: 'var(--text-muted)', fontSize: '15px' }}>{formattedUTC}</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: '15px' }}>{formattedEAT}</div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -480,39 +1195,27 @@ const Dashboard = () => {
                   borderBottom: i === filteredPharmacyRequests.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)',
                   gap: '16px'
                 }}>
-                  
-                  {/* Col 1 */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ color: '#f8fafc', fontWeight: '600', fontSize: '14px' }}>{row.med}</div>
                     <div style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Patient: {row.name}</div>
                   </div>
-
-                  {/* Col 2 */}
                   <div>
                     <span style={{ display: 'inline-block', background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '500' }}>
                       {row.dosage}
                     </span>
                   </div>
-
-                  {/* Col 3 */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', color: 'var(--text-muted)', fontSize: '12px' }}>
                     <div>ID: {row.studentId.split('/')[1] || row.studentId}</div>
                     <div>Year: {row.studentId.split('/')[2] || '17'}</div>
                   </div>
-
-                  {/* Col 4 */}
                   <div style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
                     Date: {row.date1} {row.date2}
                   </div>
-
-                  {/* Col 5 */}
                   <div>
                     <span style={{ display: 'inline-block', background: row.status === 'Pending Review' ? 'rgba(56, 189, 248, 0.1)' : row.status === 'Dispensed' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', color: row.status === 'Pending Review' ? '#38bdf8' : row.status === 'Dispensed' ? '#10b981' : '#ef4444', padding: '4px 16px', borderRadius: '16px', fontSize: '12px', fontWeight: '500' }}>
                       {row.status === 'Pending Review' ? 'Upcoming' : row.status}
                     </span>
                   </div>
-
-                  {/* Col 6 */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
                     <button onClick={() => handlePharmacyAction(row.id, 'Dispensed')} style={{ background: 'transparent', color: row.status === 'Dispensed' ? '#10b981' : '#38bdf8', border: 'none', fontWeight: '600', fontSize: '13px', cursor: 'pointer', padding: 0 }}>
                       {row.status === 'Dispensed' ? 'Dispensed' : 'Dispense'}
@@ -523,7 +1226,6 @@ const Dashboard = () => {
                       </button>
                     )}
                   </div>
-
                 </div>
               )) : (
                 <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>No prescriptions found matching your filters.</div>
@@ -533,6 +1235,7 @@ const Dashboard = () => {
         </div>
       )}
 
+      {/* Lab Technician Dashboard */}
       {user?.role === 'lab_technician' && (
         <div style={{ marginTop: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
@@ -540,7 +1243,7 @@ const Dashboard = () => {
               <h2 style={{ color: '#fff', fontSize: '24px', margin: '0 0 8px 0', fontWeight: 'bold' }}>Lab Work Queue</h2>
               <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '15px' }}>Review incoming test requests and move samples through the workflow.</p>
             </div>
-            <div style={{ color: 'var(--text-muted)', fontSize: '15px', paddingTop: '4px' }}>{formattedUTC}</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: '15px', paddingTop: '4px' }}>{formattedEAT}</div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
             <div style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>

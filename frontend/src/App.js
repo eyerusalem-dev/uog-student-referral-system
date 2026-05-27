@@ -13,6 +13,7 @@ import NewStudent from './pages/NewStudent';
 import StudentProfile from './pages/StudentProfile';
 
 import NewVisit from './pages/NewVisit';
+import VisitDetails from './pages/VisitDetails';
 
 import ReferralList from './pages/ReferralList';
 import NewReferral from './pages/NewReferral';
@@ -22,7 +23,7 @@ import DepartmentList from './pages/DepartmentList';
 
 import Profile from './pages/Profile';
 
-import Reports from './pages/Reports';
+import Report from './pages/Report';
 
 import AuditLogPage from './pages/AuditLogPage';
 
@@ -80,6 +81,15 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['admin', 'clinician']}>
                 <NewVisit />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/visits/:visitId/details"
+            element={
+              <ProtectedRoute>
+                <VisitDetails />
               </ProtectedRoute>
             }
           />
@@ -145,7 +155,7 @@ function App() {
   path="/reports"
   element={
     <ProtectedRoute allowedRoles={['admin']}>
-      <Reports />
+      <Report />
     </ProtectedRoute>
   }
 />

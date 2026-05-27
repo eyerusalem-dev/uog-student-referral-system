@@ -8,6 +8,13 @@ class LabRequestSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
+    # Patient info (read‑only)
+    patient_name = serializers.CharField(source='clinical_visit.student.__str__', read_only=True)
+    patient_university_id = serializers.CharField(source='clinical_visit.student.university_id', read_only=True)
+    clinician_username = serializers.CharField(source='clinical_visit.clinician.username', read_only=True)
+
+    class Meta:
+        model = LabRequest
     class Meta:
         model = LabRequest
         fields = [
@@ -17,8 +24,20 @@ class LabRequestSerializer(serializers.ModelSerializer):
             'reason',
             'requested_by',
             'requested_by_username',
+            'patient_name',
+            'patient_university_id',
+            'clinician_username',
             'status',
             'result_note',
+            'created_at',
+            'completed_at',
+        ]
+        read_only_fields = [
+            'requested_by',
+            'requested_by_username',
+            'patient_name',
+            'patient_university_id',
+            'clinician_username',
             'created_at',
             'completed_at',
         ]
@@ -29,6 +48,14 @@ class LabRequestSerializer(serializers.ModelSerializer):
             'completed_at',
         ]
 
+    def update(self, instance, validated_data):
+        # Lab Technicians may only modify status and result_note
+        allowed_fields = {'status', 'result_note'}
+        for key in list(validated_data.keys()):
+            if key not in allowed_fields:
+                validated_data.pop(key)
+        return super().update(instance, validated_data)
+
 
 class PrescriptionSerializer(serializers.ModelSerializer):
     prescribed_by_username = serializers.CharField(
@@ -36,6 +63,13 @@ class PrescriptionSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
+    # Patient info (read‑only)
+    patient_name = serializers.CharField(source='clinical_visit.student.__str__', read_only=True)
+    patient_university_id = serializers.CharField(source='clinical_visit.student.university_id', read_only=True)
+    clinician_username = serializers.CharField(source='clinical_visit.clinician.username', read_only=True)
+
+    class Meta:
+        model = Prescription
     class Meta:
         model = Prescription
         fields = [
@@ -47,8 +81,20 @@ class PrescriptionSerializer(serializers.ModelSerializer):
             'duration',
             'prescribed_by',
             'prescribed_by_username',
+            'patient_name',
+            'patient_university_id',
+            'clinician_username',
             'status',
             'dispense_note',
+            'created_at',
+            'dispensed_at',
+        ]
+        read_only_fields = [
+            'prescribed_by',
+            'prescribed_by_username',
+            'patient_name',
+            'patient_university_id',
+            'clinician_username',
             'created_at',
             'dispensed_at',
         ]
@@ -58,6 +104,14 @@ class PrescriptionSerializer(serializers.ModelSerializer):
             'created_at',
             'dispensed_at',
         ]
+
+    def update(self, instance, validated_data):
+        # Pharmacists may only modify status and dispense_note
+        allowed_fields = {'status', 'dispense_note'}
+        for key in list(validated_data.keys()):
+            if key not in allowed_fields:
+                validated_data.pop(key)
+        return super().update(instance, validated_data)
 
 
 class ClinicalVisitSerializer(serializers.ModelSerializer):
@@ -80,6 +134,7 @@ class ClinicalVisitSerializer(serializers.ModelSerializer):
         model = ClinicalVisit
         fields = [
             'id',
+            'visit_id',
             'student',
             'student_university_id',
             'student_name',
@@ -100,6 +155,7 @@ class ClinicalVisitSerializer(serializers.ModelSerializer):
             'is_locked',
         ]
         read_only_fields = [
+            'visit_id',
             'clinician',
             'visit_date',
             'is_locked',

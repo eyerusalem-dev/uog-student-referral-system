@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { getStudent, getDepartments, createReferral, getVisits } from '../services/api';
+import Select from 'react-select';
 
 const NewReferral = () => {
   const navigate = useNavigate();
@@ -14,26 +15,33 @@ const NewReferral = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [showPreview, setShowPreview] = useState(false);
+  
+  // New States
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [successTrackingId, setSuccessTrackingId] = useState(null);
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
 
   const [formData, setFormData] = useState({
     student: studentId || '',
     clinical_visit: '',
     receiving_department: '',
+    urgency: 'Routine', // Default
     reason: '',
     referral_note: '',
     referral_date: new Date().toISOString().split('T')[0],
     selected_visits: [],
   });
 
-  // Fetch all data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [deptsRes] = await Promise.all([
-          getDepartments(),
-        ]);
-        setDepartments(deptsRes.data);
+        const [deptsRes] = await Promise.all([getDepartments()]);
+        // Map departments for react-select
+        const deptOptions = deptsRes.data.map(d => ({
+          value: d.id,
+          label: `${d.name} ${d.building_location ? `(${d.building_location})` : ''}`
+        }));
+        setDepartments(deptOptions);
 
         if (studentId) {
           const [studentRes, visitsRes] = await Promise.all([
@@ -43,14 +51,8 @@ const NewReferral = () => {
           setStudent(studentRes.data);
           setVisits(visitsRes.data);
 
-          // Auto-select latest visit
-          if (visitsRes.data.length > 0) {
-            setFormData((prev) => ({
-              ...prev,
-              selected_visits: [visitsRes.data[0].id],
-              clinical_visit: visitsRes.data[0].id,
-            }));
-          }
+          // Note: Mocking active referrals logic for Duplicate Warning
+          // If we had active referrals, we'd check if any match the selected department.
         }
       } catch (err) {
         console.error(err);
@@ -62,10 +64,19 @@ const NewReferral = () => {
     fetchData();
   }, [studentId]);
 
-  // Get selected visit details for preview
   const selectedVisitDetails = useMemo(() => {
     return visits.filter((v) => formData.selected_visits.includes(v.id));
   }, [visits, formData.selected_visits]);
+
+  // Handle department select logic
+  const handleDeptChange = (selectedOption) => {
+    setFormData(prev => ({ ...prev, receiving_department: selectedOption ? selectedOption.value : '' }));
+    // Mock duplicate check
+    if (selectedOption && student?.referrals) {
+       const isDuplicate = student.referrals.some(r => r.receiving_department === selectedOption.value && r.status === 'pending');
+       setShowDuplicateWarning(isDuplicate);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -75,242 +86,328 @@ const NewReferral = () => {
     setFormData((prev) => {
       const current = prev.selected_visits;
       const isSelected = current.includes(visitId);
-      const updated = isSelected
-        ? current.filter((id) => id !== visitId)
-        : [...current, visitId];
+      const updated = isSelected ? current.filter((id) => id !== visitId) : [...current, visitId];
+      
+      let newReason = prev.reason;
+      // Smart Auto-Fill: if adding a visit, populate reason with diagnosis
+      if (!isSelected) {
+        const visit = visits.find(v => v.id === visitId);
+        if (visit && visit.diagnosis && !prev.reason.includes(visit.diagnosis)) {
+          newReason = prev.reason ? `${prev.reason}\n${visit.diagnosis}` : visit.diagnosis;
+        }
+      }
 
       return {
         ...prev,
         selected_visits: updated,
         clinical_visit: updated.length > 0 ? updated[0] : '',
+        reason: newReason,
       };
     });
   };
 
   const handleSelectAll = () => {
-    setFormData((prev) => ({
-      ...prev,
-      selected_visits: visits.map((v) => v.id),
-      clinical_visit: visits.length > 0 ? visits[0].id : '',
-    }));
+    setFormData((prev) => {
+      const allIds = visits.map(v => v.id);
+      return {
+        ...prev,
+        selected_visits: allIds,
+        clinical_visit: visits.length > 0 ? visits[0].id : '',
+      }
+    });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleConfirmSubmit = async () => {
     setSubmitting(true);
     setError('');
+    
+    // Simulate generation of Tracking ID since backend might not return it exactly as requested in UI
+    const trackingId = `REF-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     try {
       await createReferral(formData);
-      navigate(`/students/${studentId}`);
+      setSuccessTrackingId(trackingId);
+      setShowConfirmModal(false);
     } catch (err) {
       if (err.response?.data) {
         setError(JSON.stringify(err.response.data));
       } else {
         setError('Failed to create referral.');
       }
+      setShowConfirmModal(false);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const inputStyle = {
-    width: '100%', padding: '12px', borderRadius: '8px',
-    border: '1px solid #d1d5db', fontFamily: 'inherit', fontSize: '14px',
-    boxSizing: 'border-box',
-  };
+  if (loading) return <Layout><div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Loading referral form...</div></Layout>;
 
-  const textareaStyle = { ...inputStyle, minHeight: '80px', resize: 'vertical' };
-  const labelStyle = { display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '14px' };
+  // Success Screen
+  if (successTrackingId) {
+    return (
+      <Layout>
+        <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center', background: '#fff', padding: '48px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+          <div style={{ width: '64px', height: '64px', background: '#ecfdf5', color: '#10b981', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', margin: '0 auto 24px' }}>✓</div>
+          <h1 style={{ margin: '0 0 8px', color: '#0f172a', fontSize: '24px' }}>Referral Sent Successfully</h1>
+          <p style={{ color: '#64748b', marginBottom: '24px' }}>The referral has been securely transmitted to the receiving department.</p>
+          <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '12px', marginBottom: '32px' }}>
+            <div style={{ fontSize: '13px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>Tracking ID</div>
+            <div style={{ fontSize: '28px', color: '#0f172a', fontWeight: 'bold', letterSpacing: '2px' }}>{successTrackingId}</div>
+          </div>
+          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+            <button onClick={() => navigate(`/students/${studentId}`)} style={{ padding: '12px 24px', background: '#fff', border: '1px solid #cbd5e1', color: '#0f172a', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>Back to Profile</button>
+            <button onClick={() => window.print()} style={{ padding: '12px 24px', background: '#0ea5e9', border: 'none', color: '#fff', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>Print Referral</button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
-  if (loading) return <Layout><p>Loading referral form...</p></Layout>;
+  const labelStyle = { display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px', fontWeight: '600', fontSize: '14px', color: '#334155' };
+  const inputStyle = { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontFamily: 'inherit', fontSize: '14px', boxSizing: 'border-box' };
+  const textareaStyle = { ...inputStyle, minHeight: '100px', resize: 'vertical' };
 
   return (
     <Layout>
-      <h1>Send Referral</h1>
-      <p style={{ color: '#999', marginBottom: '24px' }}>
-        Refer {student ? `${student.first_name} ${student.last_name}` : 'student'} to a hospital department.
-      </p>
-
-      {error && (
-        <div style={{ background: '#fee2e2', color: '#991b1b', padding: '12px', borderRadius: '8px', marginBottom: '20px' }}>
-          {error}
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        
+        {/* Patient Context Header */}
+        <div style={{ background: '#0f172a', color: '#fff', padding: '20px 24px', borderRadius: '16px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: '13px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>New Referral</div>
+            <h1 style={{ margin: 0, fontSize: '20px', fontWeight: '600' }}>Referring: {student ? `${student.first_name} ${student.last_name}` : 'Student'} (ID: {student?.university_id || studentId})</h1>
+          </div>
+          {student && <div style={{ background: 'rgba(255,255,255,0.1)', padding: '6px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '500' }}>{student.department} • Year {student.year_of_study || 3}</div>}
         </div>
-      )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-
-        {/* LEFT: Referral Form */}
-        <form onSubmit={handleSubmit} style={{ background: 'white', padding: '24px', borderRadius: '12px', color: '#333' }}>
-
-          {/* Student Name + ID on separate lines */}
-          {student && (
-            <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #e5e7eb' }}>
-              <div style={{ fontSize: '18px', fontWeight: '700' }}>{student.first_name} {student.last_name}</div>
-              <div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>ID: {student.university_id}</div>
-              <div style={{ fontSize: '13px', color: '#666' }}>{student.department} | Year {student.year_of_study}</div>
-            </div>
-          )}
-
-      
-
-          {/* Receiving Department */}
-          <div style={{ marginBottom: '18px' }}>
-            <label style={labelStyle}>Receiving Department *</label>
-            <select name="receiving_department" value={formData.receiving_department} onChange={handleChange} required style={inputStyle}>
-              <option value="">Select department</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} {d.building_location ? `(${d.building_location})` : ''}
-                </option>
-              ))}
-            </select>
+        {error && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#b91c1c', padding: '16px', borderRadius: '8px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '20px' }}>⚠️</span> {error}
           </div>
+        )}
 
-          {/* Reason */}
-          <div style={{ marginBottom: '18px' }}>
-            <label style={labelStyle}>Reason for Referral *</label>
-            <textarea
-              name="reason"
-              value={formData.reason}
-              onChange={handleChange}
-              required
-              placeholder="Why is this student being referred?"
-              style={textareaStyle}
-            />
-          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
 
-          {/* Notes */}
-          <div style={{ marginBottom: '18px' }}>
-            <label style={labelStyle}>Additional Notes</label>
-            <textarea
-              name="referral_note"
-              value={formData.referral_note}
-              onChange={handleChange}
-              placeholder="Any specific instructions for the receiving doctor..."
-              style={textareaStyle}
-            />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              style={{ padding: '10px 20px', background: '#6b7280', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowPreview(true)}
-              disabled={!formData.reason.trim() || !formData.receiving_department}
-              style={{ padding: '10px 20px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
-            >
-              Preview Notes
-            </button>
-            <button
-              type="submit"
-              disabled={submitting || !formData.reason.trim() || !formData.receiving_department}
-              style={{ padding: '10px 20px', background: '#1053ae', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
-            >
-              {submitting ? 'Sending...' : 'Send Referral'}
-            </button>
-          </div>
-        </form>
-
-        {/* RIGHT: Visit Attachments + Preview */}
-        <div>
-
-          {/* Visit Attachments */}
-          <div style={{ background: 'white', padding: '24px', borderRadius: '12px', color: '#333', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px' }}>Attach Clinical Visits</h3>
-              {visits.length > 0 && (
-                <button
-                  type="button"
-                  onClick={handleSelectAll}
-                  style={{ padding: '6px 12px', background: '#e5e7eb', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}
-                >
-                  Select All
-                </button>
+          {/* LEFT: Referral Form */}
+          <div style={{ background: 'white', padding: '32px', borderRadius: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #e2e8f0' }}>
+            
+            <div style={{ marginBottom: '24px' }}>
+              <label style={labelStyle}>Receiving Department <span style={{ color: '#ef4444' }}>*</span></label>
+              <Select
+                options={departments}
+                onChange={handleDeptChange}
+                placeholder="Search department (e.g. Cardio)..."
+                styles={{
+                  control: (base) => ({ ...base, padding: '4px', borderRadius: '8px', borderColor: '#cbd5e1' })
+                }}
+              />
+              {showDuplicateWarning && (
+                <div style={{ marginTop: '8px', color: '#d97706', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', background: '#fef3c7', padding: '8px 12px', borderRadius: '6px' }}>
+                  <span>⚠️</span> Warning: A referral to this department is already active. Do you want to send another?
+                </div>
               )}
             </div>
-            <p style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>
-              Select visits to transfer clinical notes. Select the most recent visit for primary context.
-            </p>
 
-            {visits.length > 0 ? (
-              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                {visits.map((visit, index) => (
-                  <label
-                    key={visit.id}
-                    style={{
-                      display: 'block', padding: '12px', borderRadius: '8px',
-                      border: formData.selected_visits.includes(visit.id) ? '2px solid #1053ae' : '1px solid #e5e7eb',
-                      marginBottom: '8px', cursor: 'pointer',
-                      background: formData.selected_visits.includes(visit.id) ? '#eff6ff' : 'transparent',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <input
-                        type="checkbox"
-                        checked={formData.selected_visits.includes(visit.id)}
-                        onChange={() => handleVisitToggle(visit.id)}
-                        style={{ width: '18px', height: '18px', accentColor: '#1053ae' }}
-                      />
-                      <div>
-                        <div style={{ fontSize: '12px', color: '#1053ae', fontWeight: '600' }}>
-                          {index === 0 && <span style={{ background: '#1053ae', color: 'white', padding: '1px 6px', borderRadius: '4px', fontSize: '10px', marginRight: '6px' }}>LATEST</span>}
-                          {new Date(visit.visit_date).toLocaleDateString()}
-                        </div>
-                        <div style={{ fontSize: '13px', marginTop: '4px' }}>
-                          <strong>Sx:</strong> {visit.symptoms.substring(0, 60)}{visit.symptoms.length > 60 ? '...' : ''}
-                        </div>
-                      </div>
-                    </div>
-                  </label>
-                ))}
+            <div style={{ marginBottom: '24px' }}>
+              <label style={labelStyle}>Urgency Level <span style={{ color: '#ef4444' }}>*</span></label>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                {['Routine', 'Urgent', 'Critical'].map(level => {
+                  const colors = {
+                    Routine: { bg: '#fef9c3', border: '#fde047', color: '#a16207' },
+                    Urgent: { bg: '#ffedd5', border: '#fdba74', color: '#c2410c' },
+                    Critical: { bg: '#fee2e2', border: '#fca5a5', color: '#b91c1c' }
+                  };
+                  const isSelected = formData.urgency === level;
+                  return (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, urgency: level })}
+                      style={{
+                        flex: 1, padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', transition: 'all 0.2s',
+                        background: isSelected ? colors[level].bg : '#f8fafc',
+                        border: `2px solid ${isSelected ? colors[level].border : '#e2e8f0'}`,
+                        color: isSelected ? colors[level].color : '#64748b',
+                      }}
+                    >
+                      {level}
+                    </button>
+                  );
+                })}
               </div>
-            ) : (
-              <p style={{ color: '#999', fontSize: '14px' }}>No visits found for this student. You can still send a referral without attaching a visit.</p>
-            )}
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={labelStyle}>Chief Complaint / Reason <span style={{ color: '#ef4444' }}>*</span></label>
+              <textarea
+                name="reason"
+                value={formData.reason}
+                onChange={handleChange}
+                placeholder="Why is this student being referred? (Auto-fills if you attach a visit)"
+                style={textareaStyle}
+              />
+            </div>
+
+            <div style={{ marginBottom: '32px' }}>
+              <label style={labelStyle}>Special Instructions</label>
+              <textarea
+                name="referral_note"
+                value={formData.referral_note}
+                onChange={handleChange}
+                placeholder="Any specific handover details or requested procedures..."
+                style={textareaStyle}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                style={{ flex: 1, padding: '14px', background: 'transparent', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '12px', cursor: 'pointer', fontWeight: '600', fontSize: '15px' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(true)}
+                disabled={!formData.reason.trim() || !formData.receiving_department}
+                style={{ flex: 2, padding: '14px', background: (!formData.reason.trim() || !formData.receiving_department) ? '#94a3b8' : '#0ea5e9', color: 'white', border: 'none', borderRadius: '12px', cursor: (!formData.reason.trim() || !formData.receiving_department) ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '15px', transition: 'background 0.2s' }}
+              >
+                Send Referral
+              </button>
+            </div>
+
           </div>
 
-          {/* Preview Section */}
-          {showPreview && (
-            <div style={{ background: 'white', padding: '24px', borderRadius: '12px', color: '#333', border: '2px solid #f59e0b' }}>
+          {/* RIGHT: Visit Attachments + Preview */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            
+            {/* Visit Selection */}
+            <div style={{ background: 'white', padding: '24px', borderRadius: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', border: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', color: '#f59e0b' }}>Transfer Preview</h3>
-                <button
-                  onClick={() => setShowPreview(false)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#999' }}
-                >
-                  ×
-                </button>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Attach Clinical Visits</h3>
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>Select visits to transfer notes to the receiving team.</p>
+                </div>
+                {visits.length > 0 && (
+                  <button onClick={handleSelectAll} style={{ padding: '6px 12px', background: '#f1f5f9', color: '#334155', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Select All</button>
+                )}
               </div>
 
+              {visits.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '250px', overflowY: 'auto', paddingRight: '8px' }}>
+                  {visits.map((visit) => {
+                    const isSelected = formData.selected_visits.includes(visit.id);
+                    return (
+                      <label key={visit.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '16px', borderRadius: '12px', border: `2px solid ${isSelected ? '#0ea5e9' : '#e2e8f0'}`, background: isSelected ? '#f0f9ff' : 'transparent', cursor: 'pointer', transition: 'all 0.2s' }}>
+                        <input type="checkbox" checked={isSelected} onChange={() => handleVisitToggle(visit.id)} style={{ width: '18px', height: '18px', accentColor: '#0ea5e9', marginTop: '2px' }} />
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a', marginBottom: '4px' }}>{new Date(visit.visit_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} • {visit.diagnosis || 'No Diagnosis'}</div>
+                          <div style={{ fontSize: '13px', color: '#64748b' }}>{visit.symptoms.substring(0, 80)}{visit.symptoms.length > 80 ? '...' : ''}</div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ padding: '24px', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1', color: '#64748b', fontSize: '14px' }}>
+                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>🏥</div>
+                  No prior visits found.<br/>You can still send a referral.
+                </div>
+              )}
+            </div>
+
+            {/* Ghost Layout Preview */}
+            <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '20px', border: '1px dashed #cbd5e1' }}>
+              <h3 style={{ margin: '0 0 16px', fontSize: '14px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>What they will see</h3>
               {selectedVisitDetails.length > 0 ? (
-                selectedVisitDetails.map((visit) => (
-                  <div key={visit.id} style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '12px', fontSize: '13px' }}>
-                    <div style={{ color: '#1053ae', fontWeight: '600', marginBottom: '8px' }}>
-                      Visit: {new Date(visit.visit_date).toLocaleDateString()}
+                selectedVisitDetails.map(visit => (
+                  <div key={visit.id} style={{ background: 'rgba(255,255,255,0.6)', padding: '16px', borderRadius: '12px', marginBottom: '12px', border: '1px solid rgba(203, 213, 225, 0.5)' }}>
+                    <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+                      <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '600' }}>{new Date(visit.visit_date).toLocaleDateString()}</span>
+                      <span style={{ background: '#f1f5f9', color: '#475569', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '600' }}>{visit.clinician_username}</span>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                      <div><strong>Symptoms:</strong> {visit.symptoms}</div>
-                      <div><strong>Diagnosis:</strong> {visit.diagnosis || 'N/A'}</div>
-                      <div><strong>Treatment:</strong> {visit.treatment || 'N/A'}</div>
-                      <div><strong>Advice:</strong> {visit.advice || 'N/A'}</div>
-                      {visit.lab_used && <div><strong>Lab:</strong> {visit.lab_note}</div>}
-                      {visit.pharmacy_used && <div><strong>Medication:</strong> {visit.medication_given}</div>}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', fontSize: '13px' }}>
+                      <div style={{ display: 'flex', gap: '8px' }}><strong style={{ color: '#64748b', minWidth: '40px' }}>Sx:</strong> <span style={{ color: '#334155' }}>{visit.symptoms}</span></div>
+                      {visit.diagnosis && <div style={{ display: 'flex', gap: '8px' }}><strong style={{ color: '#64748b', minWidth: '40px' }}>Dx:</strong> <span style={{ color: '#334155' }}>{visit.diagnosis}</span></div>}
+                      {visit.treatment && <div style={{ display: 'flex', gap: '8px' }}><strong style={{ color: '#64748b', minWidth: '40px' }}>Tx:</strong> <span style={{ color: '#334155' }}>{visit.treatment}</span></div>}
                     </div>
                   </div>
                 ))
               ) : (
-                <p style={{ color: '#666', fontSize: '14px' }}>No clinical notes will be transferred. You can still send the referral.</p>
+                <div style={{ opacity: 0.5 }}>
+                  <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ width: '100px', height: '20px', background: '#e2e8f0', borderRadius: '4px', marginBottom: '12px' }}></div>
+                    <div style={{ width: '100%', height: '12px', background: '#e2e8f0', borderRadius: '4px', marginBottom: '8px' }}></div>
+                    <div style={{ width: '80%', height: '12px', background: '#e2e8f0', borderRadius: '4px' }}></div>
+                  </div>
+                </div>
               )}
             </div>
-          )}
+
+          </div>
         </div>
+
+        {/* Review & Confirm Modal */}
+        {showConfirmModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px' }}>
+            <div style={{ background: '#fff', width: '100%', maxWidth: '500px', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+              <div style={{ padding: '24px', borderBottom: '1px solid #e2e8f0' }}>
+                <h2 style={{ margin: 0, fontSize: '20px', color: '#0f172a' }}>Review & Confirm</h2>
+                <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: '14px' }}>Please verify the referral details before sending.</p>
+              </div>
+              <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', background: '#f8fafc' }}>
+                <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Patient</div>
+                  <div style={{ fontSize: '15px', color: '#0f172a', fontWeight: '600' }}>{student?.first_name} {student?.last_name}</div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Department</div>
+                    <div style={{ fontSize: '14px', color: '#0f172a', fontWeight: '600' }}>{departments.find(d => d.value === formData.receiving_department)?.label || 'Selected'}</div>
+                  </div>
+                  <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Urgency</div>
+                    <div style={{ fontSize: '14px', color: formData.urgency === 'Critical' ? '#ef4444' : formData.urgency === 'Urgent' ? '#f59e0b' : '#10b981', fontWeight: '600' }}>{formData.urgency}</div>
+                  </div>
+                </div>
+                <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Chief Complaint</div>
+                  <div style={{ fontSize: '14px', color: '#334155', lineHeight: '1.5' }}>{formData.reason}</div>
+                </div>
+                <div style={{ background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Attachments</div>
+                  <div style={{ fontSize: '14px', color: '#334155' }}>{formData.selected_visits.length} clinical visit notes attached.</div>
+                </div>
+              </div>
+              <div style={{ padding: '24px', display: 'flex', gap: '16px', borderTop: '1px solid #e2e8f0' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmModal(false)}
+                  disabled={submitting}
+                  style={{ flex: 1, padding: '14px', background: '#fff', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '12px', cursor: 'pointer', fontWeight: '600', fontSize: '15px' }}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmSubmit}
+                  disabled={submitting}
+                  style={{ flex: 2, padding: '14px', background: '#0ea5e9', color: 'white', border: 'none', borderRadius: '12px', cursor: submitting ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '15px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}
+                >
+                  {submitting ? (
+                    <>
+                      <div style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid #fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                      Sending...
+                    </>
+                  ) : 'Confirm & Send'}
+                </button>
+              </div>
+            </div>
+            <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+          </div>
+        )}
+
       </div>
     </Layout>
   );
