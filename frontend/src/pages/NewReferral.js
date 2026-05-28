@@ -129,7 +129,11 @@ const NewReferral = () => {
       setSuccessTrackingId(trackingId);
       setShowConfirmModal(false);
     } catch (err) {
-      if (err.response?.data) {
+      if (err.response?.status === 403) {
+        setError('Permission denied. You must be logged in as an Admin or Clinician to create referrals. Please log in again.');
+      } else if (err.response?.status === 401) {
+        setError('Session expired. Please log in again.');
+      } else if (err.response?.data) {
         setError(JSON.stringify(err.response.data));
       } else {
         setError('Failed to create referral.');
@@ -152,7 +156,7 @@ const NewReferral = () => {
           <p style={{ color: '#64748b', marginBottom: '24px' }}>The referral has been securely transmitted to the receiving department.</p>
           <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '12px', marginBottom: '32px' }}>
             <div style={{ fontSize: '13px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>Tracking ID</div>
-            <div style={{ fontSize: '28px', color: '#0f172a', fontWeight: 'bold', letterSpacing: '2px' }}>{successTrackingId}</div>
+             <div style={{ fontSize: '28px', color: '#0f172a', fontWeight: 'bold', letterSpacing: '2px' }}>{successTrackingId}</div>
           </div>
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
             <button onClick={() => navigate(`/students/${studentId}`)} style={{ padding: '12px 24px', background: '#fff', border: '1px solid #cbd5e1', color: '#0f172a', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>Back to Profile</button>
@@ -198,7 +202,12 @@ const NewReferral = () => {
                 onChange={handleDeptChange}
                 placeholder="Search department (e.g. Cardio)..."
                 styles={{
-                  control: (base) => ({ ...base, padding: '4px', borderRadius: '8px', borderColor: '#cbd5e1' })
+                  control: (base) => ({ ...base, padding: '4px', borderRadius: '8px', borderColor: '#cbd5e1' }),
+                  menu: (base) => ({ ...base, color: '#0f172a' }),
+                  option: (base, state) => ({ ...base, color: '#0f172a', backgroundColor: state.isSelected ? '#0ea5e9' : state.isFocused ? '#f0f9ff' : '#fff' }),
+                  singleValue: (base) => ({ ...base, color: '#0f172a' }),
+                  input: (base) => ({ ...base, color: '#0f172a' }),
+                  placeholder: (base) => ({ ...base, color: '#94a3b8' }),
                 }}
               />
               {showDuplicateWarning && (

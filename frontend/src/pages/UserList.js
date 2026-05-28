@@ -170,6 +170,19 @@ const UserList = () => {
     }
   };
 
+  const handleDeleteDirect = async (id) => {
+    if (window.confirm("Are you sure you want to delete this user?")) {
+      try {
+        await deleteUser(id);
+        if (editingUserId === id) resetForm();
+        await loadData();
+      } catch (err) {
+        console.error(err);
+        alert('Failed to delete user.');
+      }
+    }
+  };
+
   const getInitials = (user) => {
     if (user.first_name) return `${user.first_name.charAt(0)}${user.last_name?.charAt(0) || ''}`.toUpperCase();
     return user.username ? user.username.charAt(0).toUpperCase() : 'U';
@@ -216,7 +229,7 @@ const UserList = () => {
             </div>
             <div>
               <label style={{ display: 'block', color: 'var(--text-muted)', marginBottom: '8px', fontSize: '14px' }}>Phone Number</label>
-              <input name="phone" value={formData.phone} onChange={handleChange} style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', borderRadius: '8px', color: '#fff' }} />
+              <input name="phone" value={formData.phone} onChange={handleChange} placeholder="09xxxxxxxx or +2519xxxxxxxx" style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', borderRadius: '8px', color: '#fff' }} />
             </div>
             <div>
               <label style={{ display: 'block', color: 'var(--text-muted)', marginBottom: '8px', fontSize: '14px' }}>Role *</label>
@@ -322,7 +335,10 @@ const UserList = () => {
                       </span>
                     </td>
                     <td style={{ padding: '24px 12px' }}>
-                      <button onClick={() => startEdit(u)} style={{ background: 'transparent', border: 'none', color: '#0ea5e9', fontWeight: '600', cursor: 'pointer', padding: '0' }}>Edit</button>
+                      <div style={{ display: 'flex', gap: '16px' }}>
+                        <button onClick={() => startEdit(u)} style={{ background: 'transparent', border: 'none', color: '#0ea5e9', fontWeight: '600', cursor: 'pointer', padding: '0' }}>Edit</button>
+                        <button onClick={() => handleDeleteDirect(u.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', fontWeight: '600', cursor: 'pointer', padding: '0' }}>Delete</button>
+                      </div>
                     </td>
                   </tr>
                 ))}

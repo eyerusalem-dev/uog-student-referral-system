@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { getStudent, updateReferral } from '../services/api';
+import { getStudent, updateReferral, updateStudent, getLabRequests, getPrescriptions } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 // Ethiopian Time Formatter
@@ -69,6 +69,11 @@ const StudentProfile = () => {
   const [declineNote, setDeclineNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Edit Profile State
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editFormData, setEditFormData] = useState({});
+  const [editLoading, setEditLoading] = useState(false);
+
   useEffect(() => {
     // Fake audit log call
     console.log(`[AUDIT] Profile viewed by ${user?.username} (${user?.role}) from IP at ${new Date().toISOString()}`);
@@ -121,22 +126,52 @@ const StudentProfile = () => {
     }
   };
 
+  const handleEditChange = (e) => {
+    setEditFormData({ ...editFormData, [e.target.name]: e.target.value });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setEditLoading(true);
+    try {
+      // Create an object with the required fields (don't send visits/referrals back)
+      const dataToUpdate = {
+        first_name: editFormData.first_name,
+        last_name: editFormData.last_name,
+        gender: editFormData.gender,
+        department: editFormData.department,
+        year_of_study: editFormData.year_of_study,
+        phone: editFormData.phone,
+        emergency_contact: editFormData.emergency_contact,
+        allergies: editFormData.allergies,
+        dorm_number: editFormData.dorm_number,
+      };
+      await updateStudent(universityId, dataToUpdate);
+      fetchStudent(); // Refresh data
+      setShowEditProfile(false);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update profile');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   if (loading) return <Layout><Skeleton /></Layout>;
   if (!student) return <Layout><p style={{ color: '#fff' }}>Student not found.</p></Layout>;
 
   const isClinician = user?.role === 'clinician' || user?.role === 'admin';
-  const fullName = `${student.first_name || 'Nahom'} ${student.last_name || 'Yonas'}`.trim();
-  const initials = `${student.first_name?.charAt(0) || 'N'}${student.last_name?.charAt(0) || 'Y'}`.toUpperCase();
+  const firstName = student.first_name || 'Nahom';
+  const lastName = student.last_name || 'Yonas';
+  const fullName = `${firstName} ${lastName}`.trim();
+  // Only show "DR" prefix for clinicians
+  const displayName = user?.role === 'clinician' ? `DR ${fullName}` : fullName;
+  const initials = `${firstName?.charAt(0) || 'N'}${lastName?.charAt(0) || 'Y'}`.toUpperCase();
 
-  const mockVitals = [
-    { date: '2026-05-24T10:00:00Z', bp: '120/80', hr: '72 bpm', temp: '36.8 °C', bmi: '22.4', o2: '98%' },
-    { date: '2026-05-21T09:00:00Z', bp: '122/82', hr: '75 bpm', temp: '37.1 °C', bmi: '22.4', o2: '97%' }
-  ];
-
-  const mockLabs = [
-    { id: 'L1', test: 'Complete Blood Count', date: '2026-05-20T08:00:00Z', status: 'Completed', flag: 'Normal' },
-    { id: 'L2', test: 'Lipid Panel', date: '2026-05-24T08:00:00Z', status: 'Pending', flag: 'Waiting' }
-  ];
+  // Check if student has any clinic history (visits)
+  const hasClinicHistory = student.visits && student.visits.length > 0;
+  const hasLabRequests = student.visits && student.visits.some(v => v.lab_requests && v.lab_requests.length > 0);
+  const hasPrescriptions = student.visits && student.visits.some(v => v.prescriptions && v.prescriptions.length > 0);
 
   return (
     <Layout>
@@ -200,8 +235,8 @@ const StudentProfile = () => {
                   <div className="status-dot"></div>
                 </div>
                 <h2>{fullName}</h2>
-                <div className="demographics">21 yrs • Male • O+</div>
-                <Link to={`/students/edit/${universityId}`} className="btn-outline">Update Profile</Link>
+                <div className="demographics">{student.gender || 'N/A'}</div>
+                <button onClick={() => { setEditFormData({ ...student }); setShowEditProfile(true); }} className="btn-outline">Update Profile</button>
               </div>
 
               <div className="info-card">
@@ -211,13 +246,6 @@ const StudentProfile = () => {
                 <div className="info-row"><span>Year:</span> <strong>{student.year_of_study || 3}</strong></div>
               </div>
 
-              <div className="info-card">
-                <h3>Vitals Summary</h3>
-                <div className="info-row"><span>BP:</span> <strong>120/80</strong> <span className="trend up">↑</span></div>
-                <div className="info-row"><span>HR:</span> <strong>72 bpm</strong> <span className="trend stable">→</span></div>
-                <div className="info-row"><span>Temp:</span> <strong>36.8 °C</strong></div>
-                <div className="info-row"><span>BMI:</span> <strong>22.4</strong></div>
-              </div>
             </div>
           )}
 
@@ -250,42 +278,6 @@ const StudentProfile = () => {
                           </div>
                             <div className="card-actions">
                             <button title="View Details" onClick={() => navigate(`/visits/${visit.id}/details?student=${universityId}`)}>👁️</button>
-                            <button title="Print" onClick={() => navigate(`/visits/${visit.id}/details?student=${universityId}`)}>🖨️</button>
-                          </div>
-                        </div>
-                        <div className="card-provider">Provider: <strong>{visit.clinician_username}</strong></div>
-                        <div className="card-body">
-                          <div className="data-row"><strong>Symptoms:</strong> <span>{visit.symptoms || 'None reported'}</span></div>
-                          <div className="data-row"><strong>Diagnosis:</strong> <span>{visit.diagnosis || 'Pending'}</span></div>
-                          <div className="data-row"><strong>Treatment:</strong> <span>{visit.treatment || 'Observation'}</span></div>
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <EmptyState message="No clinical visits recorded yet." icon="🏥" />
-                )}
-              </div>
-            </div>
-            <div className="feed-section">
-              <h4 className="section-title"><span className="icon">🩺</span> Encounters</h4>
-              <div className={viewMode === 'grid' ? 'card-grid' : 'timeline-list'}>
-                {student.visits && student.visits.length > 0 ? (
-                  student.visits.map((visit) => {
-                    const eat = formatEAT(visit.visit_date);
-                    const locked = isOlderThan24h(visit.visit_date);
-                    return (
-                      <div key={visit.id} className="clinical-card">
-                        <div className="card-header">
-                          <div className="card-meta">
-                            <span className="badge date"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> {eat.date}</span>
-                            <span className="badge time"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> {eat.time}</span>
-                            {locked && <span className="badge lock" title="Read-only (older than 24h)">🔒</span>}
-                          </div>
-                          <div className="card-actions">
-                            { (user?.role === 'clinician' || user?.role === 'admin') && (
-                            <button title="View Details" onClick={() => navigate(`/visits/${visit.id}/details?student=${universityId}`)}>👁️</button>
-                          ) }
                             <button title="Print" onClick={() => navigate(`/visits/${visit.id}/details?student=${universityId}`)}>🖨️</button>
                           </div>
                         </div>
@@ -343,131 +335,86 @@ const StudentProfile = () => {
                 )}
               </div>
             </div>
-            <div className="feed-section">
-              <h4 className="section-title"><span className="icon">↗️</span> Referrals</h4>
-              <div className="card-grid">
-                {student.referrals && student.referrals.length > 0 ? (
-                  student.referrals.map((ref) => {
-                    const eat = formatEAT(ref.created_at || '2026-05-24T10:00:00Z');
-                    const urgencyColor = ref.urgency === 'Critical' ? '#ef4444' : ref.urgency === 'Urgent' ? '#f59e0b' : 'transparent';
-                    return (
-                      <div key={ref.referral_id} className="clinical-card referral-card" style={{ borderLeft: ref.urgency && ref.urgency !== 'Routine' ? `4px solid ${urgencyColor}` : undefined }}>
-                        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
-                          <div className="card-meta" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <span className={`status-badge ${ref.status?.toLowerCase() || 'pending'}`}>
-                              {ref.status?.toUpperCase() || 'PENDING'}
-                            </span>
-                            {ref.urgency && ref.urgency !== 'Routine' && (
-                              <span style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', background: urgencyColor, color: '#fff' }}>
-                                {ref.urgency.toUpperCase()}
-                              </span>
-                            )}
-                            <span className="text-muted">{getRelativeTime(ref.created_at || '2026-05-24T10:00:00Z')}</span>
-                          </div>
-                          <div 
-                            style={{ fontSize: '12px', fontWeight: 'bold', color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}
-                            title="Click to copy Tracking ID"
-                            onClick={() => { navigator.clipboard.writeText(ref.referral_id); alert(`Copied ${ref.referral_id} to clipboard`); }}
-                          >
-                            {ref.referral_id}
-                          </div>
-                        </div>
-                        <div className="card-body">
-                          <div className="data-row"><strong>To:</strong> <span>{ref.receiving_department_name}</span></div>
-                          <div className="data-row"><strong>From:</strong> <span>{ref.referred_by_username || 'Clinician'} (Sent {eat.date})</span></div>
-                          <div className="data-row"><strong>Reason:</strong> <span>{ref.reason}</span></div>
-                          {ref.status !== 'pending' && <div className="data-row"><strong>Note:</strong> <span>{ref.response_note || 'No notes provided.'}</span></div>}
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <EmptyState message="No referrals sent." icon="📬" />
-                )}
-              </div>
-            </div>
 
             {/* Prescriptions Section */}
             <div className="feed-section">
               <h4 className="section-title"><span className="icon">💊</span> Active Prescriptions</h4>
-              <div className="table-container">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Medication</th>
-                      <th>Dosage & Freq</th>
-                      <th>Prescriber</th>
-                      <th>Date</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><strong>Albuterol Inhaler</strong></td>
-                      <td>2 puffs QID PRN</td>
-                      <td>Dr. Selam T.</td>
-                      <td>May 21, 2026</td>
-                      <td><span className="status-badge dispensed">Dispensed</span></td>
-                      <td><button className="btn-link">Renew</button></td>
-                    </tr>
-                    <tr>
-                      <td><strong>Ibuprofen</strong></td>
-                      <td>400mg PO TID</td>
-                      <td>Dr. Dawit R.</td>
-                      <td>May 24, 2026</td>
-                      <td><span className="status-badge pending">Pending</span></td>
-                      <td><button className="btn-link">Cancel</button></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              {hasClinicHistory && hasPrescriptions ? (
+                <div className="table-container">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Medication</th>
+                        <th>Dosage & Freq</th>
+                        <th>Prescriber</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {student.visits.flatMap(v => v.prescriptions || []).map((rx, idx) => (
+                        <tr key={idx}>
+                          <td><strong>{rx.medication_name}</strong></td>
+                          <td>{rx.dosage || 'N/A'} {rx.frequency || ''}</td>
+                          <td>{rx.clinician_username || 'N/A'}</td>
+                          <td>{formatEAT(rx.created_at).date}</td>
+                          <td><span className={`status-badge ${rx.status}`}>{rx.status}</span></td>
+                          <td><button className="btn-link">View</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <EmptyState message={hasClinicHistory ? "No prescriptions on record." : "No prescriptions - student has no clinic history yet."} icon="💊" />
+              )}
             </div>
 
             {/* Labs Section */}
             <div className="feed-section">
               <h4 className="section-title"><span className="icon">🔬</span> Labs & Diagnostics</h4>
-              <div className="table-container">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Test Name</th>
-                      <th>Requested Date</th>
-                      <th>Status</th>
-                      <th>Result/Flag</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mockLabs.map(lab => (
-                      <tr key={lab.id}>
-                        <td><strong>{lab.test}</strong></td>
-                        <td>{formatEAT(lab.date).date}</td>
-                        <td><span className={`status-badge ${lab.status.toLowerCase()}`}>{lab.status}</span></td>
-                        <td>{lab.flag === 'Normal' ? <span style={{color: '#10b981'}}>Normal</span> : <span style={{color: '#f59e0b'}}>{lab.flag}</span>}</td>
-                        <td><button className="btn-link" disabled={lab.status !== 'Completed'}>Download</button></td>
+              {hasClinicHistory && hasLabRequests ? (
+                <div className="table-container">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Test Name</th>
+                        <th>Requested Date</th>
+                        <th>Status</th>
+                        <th>Result/Flag</th>
+                        <th>Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {student.visits.flatMap(v => v.lab_requests || []).map((lab, idx) => (
+                        <tr key={idx}>
+                          <td><strong>{lab.test_name}</strong></td>
+                          <td>{formatEAT(lab.created_at).date}</td>
+                          <td><span className={`status-badge ${lab.status}`}>{lab.status}</span></td>
+                          <td>{lab.status === 'completed' ? <span style={{color: '#10b981'}}>Available</span> : <span style={{color: '#f59e0b'}}>Pending</span>}</td>
+                          <td><button className="btn-link" disabled={lab.status !== 'completed'}>View Results</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <EmptyState message={hasClinicHistory ? "No lab requests on record." : "No lab requests - student has no clinic history yet."} icon="🔬" />
+              )}
             </div>
-
-            <div style={{ textAlign: 'center', marginTop: '24px' }}>
               <button className="btn-outline">Load Older Records</button>
             </div>
 
           </div>
         </div>
 
-        {/* Footer */}
-        <footer className="privacy-footer">
-          <p>Confidential Medical Record • Handled in accordance with Ethiopian Health Data Privacy Guidelines.</p>
-          <p>Activity logged for audit purposes. Last synced: {new Date().toLocaleTimeString()} EAT</p>
-        </footer>
-
-      </div>
-
+      {/* Footer */}
+      <footer className="privacy-footer">
+        <p>Confidential Medical Record • Handled in accordance with Ethiopian Health Data Privacy Guidelines.</p>
+        <p>Activity logged for audit purposes. Last synced: {new Date().toLocaleTimeString()} EAT</p>
+      </footer>
+    
       {/* Detail Modal for Clinical Note */}
       {selectedVisit && (user?.role === 'clinician' || user?.role === 'admin') && (
         <div className="modal-overlay" onClick={() => setSelectedVisit(null)}>
@@ -683,6 +630,61 @@ const StudentProfile = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Profile Modal */}
+      {showEditProfile && (
+        <div className="modal-overlay" onClick={() => setShowEditProfile(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <h3>Update Profile</h3>
+            <form onSubmit={handleEditSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>First Name</label>
+                <input name="first_name" value={editFormData.first_name || ''} onChange={handleEditChange} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ccc' }} required />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>Last Name</label>
+                <input name="last_name" value={editFormData.last_name || ''} onChange={handleEditChange} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ccc' }} required />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>Gender</label>
+                <select name="gender" value={editFormData.gender || ''} onChange={handleEditChange} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ccc' }} required>
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>Department</label>
+                <input name="department" value={editFormData.department || ''} onChange={handleEditChange} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ccc' }} required />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>Year of Study</label>
+                <input name="year_of_study" value={editFormData.year_of_study || ''} onChange={handleEditChange} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ccc' }} required />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>Phone</label>
+                <input name="phone" value={editFormData.phone || ''} onChange={handleEditChange} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ccc' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>Emergency Contact</label>
+                <input name="emergency_contact" value={editFormData.emergency_contact || ''} onChange={handleEditChange} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ccc' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gridColumn: '1 / -1' }}>
+                <label style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>Allergies</label>
+                <input name="allergies" value={editFormData.allergies || ''} onChange={handleEditChange} placeholder="e.g. Peanuts, Penicillin (Optional)" style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ccc' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gridColumn: '1 / -1' }}>
+                <label style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>Dorm Number</label>
+                <input name="dorm_number" value={editFormData.dorm_number || ''} onChange={handleEditChange} placeholder="e.g. Block 4, Room 12 (Optional)" style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ccc' }} />
+              </div>
+              <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
+                <button type="button" onClick={() => setShowEditProfile(false)} className="btn-secondary">Cancel</button>
+                <button type="submit" disabled={editLoading} className="btn-primary">{editLoading ? 'Saving...' : 'Save Changes'}</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

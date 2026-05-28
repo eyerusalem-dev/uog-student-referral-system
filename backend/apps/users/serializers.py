@@ -5,7 +5,7 @@ from rest_framework import serializers
 User = get_user_model()
 
 
-ETHIOPIAN_PHONE_REGEX = re.compile(r'^(\+2519\d{8}|2519\d{8})$')
+ETHIOPIAN_PHONE_REGEX = re.compile(r'^(\+2519\d{8}|2519\d{8}|09\d{8})$')
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -34,7 +34,7 @@ class UserSerializer(serializers.ModelSerializer):
         if value:
             if not ETHIOPIAN_PHONE_REGEX.match(value):
                 raise serializers.ValidationError(
-                    "Phone must be in Ethiopian international format: +2519XXXXXXXX or 2519XXXXXXXX"
+                    "Phone must be in Ethiopian format: +2519XXXXXXXX, 2519XXXXXXXX, or 09XXXXXXXX"
                 )
         return value
 

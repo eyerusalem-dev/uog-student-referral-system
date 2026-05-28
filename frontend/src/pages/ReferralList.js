@@ -37,9 +37,19 @@ const DocumentIcon = () => (
 const formatDisplayDate = (isoString) => {
   if (!isoString) return { date: 'N/A', time: 'N/A' };
   const dateObj = new Date(isoString);
-  const date = new Intl.DateTimeFormat('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).format(dateObj);
-  const time = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).format(dateObj);
-  return { date, time };
+  const date = new Intl.DateTimeFormat('en-US', { 
+    timeZone: 'Africa/Addis_Ababa',
+    day: '2-digit', 
+    month: 'short', 
+    year: 'numeric' 
+  }).format(dateObj);
+  const time = new Intl.DateTimeFormat('en-US', { 
+    timeZone: 'Africa/Addis_Ababa',
+    hour: '2-digit', 
+    minute: '2-digit', 
+    hour12: true 
+  }).format(dateObj);
+  return { date, time: `${time} EAT` };
 };
 
 const ReferralList = () => {

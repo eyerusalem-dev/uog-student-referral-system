@@ -359,7 +359,12 @@ const Dashboard = () => {
               type: 'Note',
               studentName: v.student_name,
               studentId: v.student_university_id,
-              time: new Date(v.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              time: new Date(v.created_at).toLocaleTimeString('en-US', { 
+                timeZone: 'Africa/Addis_Ababa',
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: true 
+              }),
               id: v.id
             });
           });
@@ -368,11 +373,22 @@ const Dashboard = () => {
               type: 'Referral',
               studentName: r.student_name,
               studentId: r.student_university_id,
-              time: new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              time: new Date(r.created_at).toLocaleTimeString('en-US', { 
+                timeZone: 'Africa/Addis_Ababa',
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: true 
+              }),
               id: r.referral_id
             });
           });
-          combined.sort((a, b) => new Date(b.time) - new Date(a.time));
+          // Sort by time string (since they're all in the same timezone, string comparison works for same-day times)
+          combined.sort((a, b) => {
+            // Convert time strings to comparable values
+            const timeA = a.time.includes('AM') ? a.time.replace(' AM', '') : a.time.replace(' PM', '');
+            const timeB = b.time.includes('AM') ? b.time.replace(' AM', '') : b.time.replace(' PM', '');
+            return timeB.localeCompare(timeA);
+          });
           setTodaysConsultations(combined);
         } catch (e) {
           console.error('Failed to load consultations', e);
@@ -674,79 +690,7 @@ const Dashboard = () => {
             <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading dashboard data...</div>
           ) : stats ? (
             <>
-              {/* METRICS CARDS ROW */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '24px', marginBottom: '24px' }}>
-                <MetricCard
-                  title="Total Referrals"
-                  value={stats.referrals.total}
-                  trend={stats.referrals.trends.total}
-                  color="#3B82F6"
-                  icon={<ReportIcon />}
-                />
-                <MetricCard
-                  title="Pending"
-                  value={stats.referrals.pending}
-                  subtitle="Awaiting review"
-                  trend={stats.referrals.trends.pending}
-                  color="#F59E0B"
-                  icon={
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  }
-                />
-                <MetricCard
-                  title="Accepted"
-                  value={stats.referrals.accepted}
-                  subtitle="Approved referrals"
-                  trend={stats.referrals.trends.accepted}
-                  color="#10B981"
-                  icon={
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
-                  }
-                />
-                <MetricCard
-                  title="Declined"
-                  value={stats.referrals.declined}
-                  subtitle="Rejected referrals"
-                  trend={stats.referrals.trends.declined}
-                  color="#EF4444"
-                  icon={
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  }
-                />
-              </div>
-
-              {/* SECOND ROW: Lab, Prescription, Clinical Visits */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', marginBottom: '24px' }}>
-                <MetricCard
-                  title="Lab Requests"
-                  value={stats.lab.total}
-                  rate={stats.lab.completion_rate}
-                  rateLabel="Completion"
-                  color="#8B5CF6"
-                  icon={
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 3h6v2H9zM10 5v6l-4 8h12l-4-8V5"/><circle cx="12" cy="15" r="2"/></svg>
-                  }
-                />
-                <MetricCard
-                  title="Prescriptions"
-                  value={stats.prescriptions.total}
-                  rate={stats.prescriptions.fulfillment_rate}
-                  rateLabel="Fulfillment"
-                  color="#06B6D4"
-                  icon={
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5v14"/></svg>
-                  }
-                />
-                <MetricCard
-                  title="Clinical Visits"
-                  value={stats.clinical_visits}
-                  subtitle="Patient consultations"
-                  color="#EC4899"
-                  icon={
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4.8 2.3A.3.3 0 0 0 5 2h14a.3.3 0 0 1 .3.3v19.4a.3.3 0 0 1-.3.3H5a.3.3 0 0 1-.3-.3z"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
-                  }
-                />
-              </div>
+              {/* METRICS CARDS AND CHARTS HAVE BEEN MOVED TO REPORT PAGE */}
 
               {/* THIRD ROW: Additional Metrics */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '24px', marginBottom: '24px' }}>
@@ -783,37 +727,12 @@ const Dashboard = () => {
                 </Link>
               </div>
 
-              {/* VISUALIZATIONS SECTION */}
-              <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', marginBottom: '24px' }}>
-                {/* Bar Chart - Referrals by Department (60% width) */}
-                <div className="dash-card" style={{ flex: '1 1 60%', padding: '24px', borderRadius: '16px', minWidth: '400px' }}>
-                  <BarChart 
-                    title="Referrals by Department"
-                    data={stats.department_breakdown.map(dept => ({
-                      label: dept.department_name,
-                      count: dept.count,
-                      color: '#3B82F6'
-                    }))}
-                  />
-                </div>
 
-                {/* Donut Chart - Status Distribution (40% width) */}
-                <div className="dash-card" style={{ flex: '1 1 40%', padding: '24px', borderRadius: '16px', minWidth: '300px' }}>
-                  <DonutChart
-                    title="Referral Status Distribution"
-                    data={stats.status_distribution.map(s => ({
-                      label: s.status,
-                      value: s.count,
-                      color: s.color
-                    }))}
-                  />
-                </div>
-              </div>
 
               {/* RECENT REFERRALS TABLE */}
               <div className="dash-card" style={{ padding: 0, overflow: 'hidden', borderRadius: '16px' }}>
                 <div style={{ padding: '24px 32px' }}>
-                  <h3 style={{ margin: 0, fontSize: '20px', color: '#fff', fontWeight: 'bold' }}>Recent Referred Students</h3>
+                  <h3 style={{ margin: 0, fontSize: '20px', color: '#fff', fontWeight: 'bold' }}>Notification List</h3>
                 </div>
                 {referralsLoading ? (
                   <p style={{ padding: '0 32px 32px', color: 'var(--text-muted)' }}>Loading recent referrals...</p>
@@ -850,7 +769,12 @@ const Dashboard = () => {
                             </span>
                           </td>
                           <td style={{ padding: '24px 32px', color: 'var(--text-muted)', fontSize: '15px' }}>
-                            {new Date(ref.created_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}
+                            {new Date(ref.created_at).toLocaleDateString('en-US', { 
+                              timeZone: 'Africa/Addis_Ababa',
+                              month: 'numeric', 
+                              day: 'numeric', 
+                              year: 'numeric' 
+                            })}
                           </td>
                           <td style={{ padding: '24px 32px' }}>
                             <Link to={`/referrals/${ref.referral_id}`} style={{ color: '#0ea5e9', fontSize: '14px', fontWeight: '600', textDecoration: 'none' }} className="hover-underline">

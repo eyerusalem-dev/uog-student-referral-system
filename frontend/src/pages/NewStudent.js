@@ -12,10 +12,13 @@ const NewStudent = () => {
     university_id: '',
     first_name: '',
     last_name: '',
+    gender: '',
     department: '',
     year_of_study: '',
     phone: '',
     emergency_contact: '',
+    allergies: '',
+    dorm_number: '',
     photo: null,
   });
 
@@ -64,8 +67,8 @@ const NewStudent = () => {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
           
           <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>University ID (e.g., UOG-2021-045)</label>
-            <input name="university_id" required onChange={handleChange} placeholder="No slashes allowed" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>University ID (e.g., GUR-2024-01)</label>
+            <input name="university_id" required onChange={handleChange} placeholder="Format: GUR-YYYY-XX" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
           </div>
           
           <div>
@@ -79,6 +82,15 @@ const NewStudent = () => {
           </div>
 
           <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Gender</label>
+            <select name="gender" required onChange={handleChange} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}>
+              <option value="">Select Gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </div>
+
+          <div>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Academic Department</label>
             <input name="department" required onChange={handleChange} placeholder="e.g. Computer Science" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
           </div>
@@ -89,13 +101,23 @@ const NewStudent = () => {
           </div>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Phone Number</label>
-            <input name="phone" required onChange={handleChange} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Phone Number (e.g., 0912345678)</label>
+            <input name="phone" required onChange={handleChange} placeholder="09XXXXXXXX" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
           </div>
 
           <div>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Emergency Contact</label>
             <input name="emergency_contact" onChange={handleChange} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Allergies</label>
+            <input name="allergies" onChange={handleChange} placeholder="e.g. Peanuts, Penicillin (Optional)" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Dorm Number</label>
+            <input name="dorm_number" required onChange={handleChange} placeholder="e.g. Block 4, Room 12" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
           </div>
 
           <div>

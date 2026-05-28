@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 
-ETHIOPIAN_PHONE_REGEX = re.compile(r'^(\+2519\d{8}|2519\d{8})$')
+ETHIOPIAN_PHONE_REGEX = re.compile(r'^(\+2519\d{8}|2519\d{8}|09\d{8})$')
 
 
 def validate_ethiopian_phone(value):
@@ -13,7 +13,7 @@ def validate_ethiopian_phone(value):
 
     if not ETHIOPIAN_PHONE_REGEX.match(value):
         raise ValidationError(
-            "Phone must be in Ethiopian international format: +2519XXXXXXXX or 2519XXXXXXXX"
+            "Phone must be in Ethiopian format: +2519XXXXXXXX, 2519XXXXXXXX, or 09XXXXXXXX"
         )
 
 

@@ -160,7 +160,7 @@ const AuditLogPage = () => {
             {Object.entries(metrics).map(([k, v]) => (
               <div key={k} className="metric-card">
                 <strong>{k.replace(/_/g, " ")}</strong>
-                <span>{v}</span>
+                <span>{typeof v === 'object' ? JSON.stringify(v) : v}</span>
               </div>
             ))}
           </div>

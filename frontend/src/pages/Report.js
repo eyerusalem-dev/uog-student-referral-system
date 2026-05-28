@@ -681,7 +681,12 @@ const Report = () => {
                           </span>
                         </td>
                         <td style={{ padding: '24px 32px', color: 'var(--text-muted)', fontSize: '15px' }}>
-                          {new Date(ref.created_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}
+                          {new Date(ref.created_at).toLocaleDateString('en-US', { 
+                            timeZone: 'Africa/Addis_Ababa',
+                            month: 'numeric', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          })}
                         </td>
                         <td style={{ padding: '24px 32px' }}>
                           <Link to={`/referrals/${ref.referral_id}`} style={{ color: '#0ea5e9', fontSize: '14px', fontWeight: '600', textDecoration: 'none' }} className="hover-underline">

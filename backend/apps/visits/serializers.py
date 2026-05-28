@@ -15,8 +15,6 @@ class LabRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = LabRequest
-    class Meta:
-        model = LabRequest
         fields = [
             'id',
             'clinical_visit',
@@ -41,12 +39,6 @@ class LabRequestSerializer(serializers.ModelSerializer):
             'created_at',
             'completed_at',
         ]
-        read_only_fields = [
-            'requested_by',
-            'requested_by_username',
-            'created_at',
-            'completed_at',
-        ]
 
     def update(self, instance, validated_data):
         # Lab Technicians may only modify status and result_note
@@ -68,8 +60,6 @@ class PrescriptionSerializer(serializers.ModelSerializer):
     patient_university_id = serializers.CharField(source='clinical_visit.student.university_id', read_only=True)
     clinician_username = serializers.CharField(source='clinical_visit.clinician.username', read_only=True)
 
-    class Meta:
-        model = Prescription
     class Meta:
         model = Prescription
         fields = [
@@ -98,15 +88,9 @@ class PrescriptionSerializer(serializers.ModelSerializer):
             'created_at',
             'dispensed_at',
         ]
-        read_only_fields = [
-            'prescribed_by',
-            'prescribed_by_username',
-            'created_at',
-            'dispensed_at',
-        ]
 
     def update(self, instance, validated_data):
-        # Pharmacists may only modify status and dispense_note
+        # Pharmacists may only modify status
         allowed_fields = {'status', 'dispense_note'}
         for key in list(validated_data.keys()):
             if key not in allowed_fields:

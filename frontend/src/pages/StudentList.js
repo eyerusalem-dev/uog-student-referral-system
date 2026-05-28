@@ -52,8 +52,28 @@ const StudentList = () => {
   return (
     <Layout>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '32px', flexWrap: 'wrap', gap: '20px' }}>
-        <div>
-          <h1 style={{ fontSize: '32px', margin: '0 0 12px 0', color: '#fff', fontWeight: 'bold' }}>Students</h1>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <h1 style={{ fontSize: '32px', margin: '0', color: '#fff', fontWeight: 'bold' }}>Students</h1>
+          <Link 
+            to="/students/new" 
+            style={{ 
+              background: '#3b82f6', 
+              color: '#fff', 
+              padding: '10px 16px', 
+              borderRadius: '8px', 
+              textDecoration: 'none', 
+              fontSize: '14px', 
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              width: 'fit-content',
+              transition: 'background 0.2s'
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Register New Student
+          </Link>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', padding: '12px 16px', borderRadius: '8px', color: 'var(--text-muted)', fontSize: '14px', minWidth: '260px', flex: 1, maxWidth: '400px' }}>
