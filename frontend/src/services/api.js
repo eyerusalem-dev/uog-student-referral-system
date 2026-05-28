@@ -175,4 +175,11 @@ export const getAuditEnums   = ()            => api.get('/audit-logs/enums/');
 export const exportAuditCSV  = (params = {}) =>
   api.get('/audit-logs/export/', { params, responseType: 'blob' });
 
+/* =========================
+   HELP & SUPPORT
+========================= */
+export const getFaqs            = ()       => api.get('/help/faqs/');
+export const submitSupportTicket = (data)  => api.post('/help/support-tickets/', data);
+export const getSystemStatus    = ()       => api.get('/system/status/');
+
 export default api;

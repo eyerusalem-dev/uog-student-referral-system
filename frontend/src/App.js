@@ -29,7 +29,8 @@ import AuditLogPage from './pages/AuditLogPage';
 
 import LabRequestsPage from './pages/LabRequestsPage';
 import PrescriptionsPage from './pages/PrescriptionsPage';
-
+import Help from './pages/Help';
+import Settings from './pages/Settings';
 
 
 function App() {
@@ -179,6 +180,24 @@ function App() {
 />
 
 
+
+          <Route
+            path="/help"
+            element={
+              <ProtectedRoute>
+                <Help />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
