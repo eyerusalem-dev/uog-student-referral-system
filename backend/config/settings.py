@@ -5,14 +5,14 @@ from pathlib import Path
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv()
+load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = 'django-insecure-qk_gh-n@3n+8l4bpi6@rzyc1-3#_2e@sj_w-tu1^9!($%!4^fd'
 
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 
@@ -67,25 +67,28 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'uog_referral_system',
-        'USER': 'root',
-        'PASSWORD': 'J0157515', # Put your actual MySQL password here
-        'HOST': 'localhost',
-        'PORT': '3306',
-    }
-}
-
 #DATABASES = {
-    #'default': dj_database_url.config(
-      #  default=os.getenv('DATABASE_URL'),
-     #   conn_max_age=600,
-      #  ssl_require=True
- #   )
+ #   'default': {
+        #'ENGINE': 'django.db.backends.mysql',
+        #'NAME': 'uog_referral_system',
+        #'USER': 'root',
+        #'PASSWORD': 'J0157515', 
+        #'HOST': 'localhost',
+        #'PORT': '3306',
+    #}
 #}
 
+DATABASES = {
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL'),
+        conn_max_age=600,
+        ssl_require=True
+    )
+}
+
+DATABASES["local_source"] = dj_database_url.parse(
+    os.environ["LOCAL_DATABASE_URL"]
+)
 
 AUTH_USER_MODEL = 'users.User'
 
@@ -98,12 +101,7 @@ REST_FRAMEWORK = {
     ),
 }
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:3001",
-]
+CORS_ALLOWED_ALL_ORIGINS = True
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -154,3 +152,6 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True

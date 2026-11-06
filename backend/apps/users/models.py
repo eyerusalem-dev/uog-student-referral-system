@@ -62,8 +62,10 @@ class User(AbstractUser):
             self.department = None
 
     def save(self, *args, **kwargs):
-        self.full_clean()   # enforce validation everywhere
-        super().save(*args, **kwargs)
+         self.phone = (self.phone or "").strip() or None
+
+         self.full_clean()
+         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
