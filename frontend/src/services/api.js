@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api',
+  baseURL: 'https://uog-student-referral-system.onrender.com',
 });
 
 // Flag to prevent multiple refresh requests
@@ -64,7 +64,7 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const response = await axios.post('http://127.0.0.1:8000/api/auth/refresh/', {
+        const response = await axios.post('https://uog-student-referral-system.onrender.com/api/auth/refresh/', {
           refresh: refreshToken
         });
 
